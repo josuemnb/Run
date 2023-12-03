@@ -21,12 +21,12 @@ namespace Run.V12 {
         internal string ExecutionFolder;
         public Program(string path) : base(path) {
             ExecutionFolder = Environment.CurrentDirectory;
-            Directory.SetCurrentDirectory("run/V12/lib");
+            Directory.SetCurrentDirectory("lib");
         }
 
         public Program(Stream stream) : base(stream) {
             ExecutionFolder = Environment.CurrentDirectory;
-            Directory.SetCurrentDirectory("run/V12/lib");
+            Directory.SetCurrentDirectory("lib");
         }
 
         public override void Parse() {

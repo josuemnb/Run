@@ -74,7 +74,7 @@ namespace Run.V12 {
             //TODO improve this code
             var tcc = Directory.EnumerateFiles(Path.GetDirectoryName(location), "tcc.exe", SearchOption.AllDirectories).FirstOrDefault();
             var info = new ProcessStartInfo(tcc) {
-                Arguments = "-I" + Path.GetDirectoryName(location) + "/run/V12 " + (Builder.Program.HasMain ? "-o " : "-c ") + "..\\" + Builder.Program.Token.Value + ".exe " + Destination + " -w " + (libraries.Count > 0 ? " -L" + string.Join(" -L", libraries.Select(Path.GetDirectoryName)) + "\"" + " -l\"" + string.Join(" -l\"", libraries.Select(Path.GetFileName)) : ""),
+                Arguments = "-I" + Path.GetDirectoryName(location) + "/lib " + (Builder.Program.HasMain ? "-o " : "-c ") + "..\\" + Builder.Program.Token.Value + ".exe " + Destination + " -w " + (libraries.Count > 0 ? " -L" + string.Join(" -L", libraries.Select(Path.GetDirectoryName)) + "\"" + " -l\"" + string.Join(" -l\"", libraries.Select(Path.GetFileName)) : ""),
                 WindowStyle = ProcessWindowStyle.Hidden,
                 //CreateNoWindow = true,
                 //UseShellExecute = false,

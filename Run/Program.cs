@@ -1,7 +1,7 @@
 ﻿namespace Run {
     class Run {
         static void Main() {
-            var program = new V12.Program("run/source/main");
+            var program = new V12.Program("next/main");
             program.Parse();
             program.Build();
             //program.Print();

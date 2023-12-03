@@ -2,16 +2,6 @@
 
 namespace Run {
 
-    public static class Constants {
-        public static Dictionary<TokenType, int> ContextTypes = new Dictionary<TokenType, int>() {
-            {TokenType.PLUS, 1},
-            {TokenType.MINUS, 1},
-            {TokenType.DIVIDE, 1},
-            {TokenType.MOD, 1},
-            {TokenType.MULTIPLY, 1},
-        };
-    }
-
     public enum TokenType {
         NONE = 0,
         ARITMETIC = 1,

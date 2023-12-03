@@ -17,31 +17,31 @@
   </ItemGroup>
 
   <ItemGroup>
-    <None Update="run\next\ast.run">
+    <None Update="next\ast.run">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
-    <None Update="run\next\block.run">
+    <None Update="next\block.run">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
-    <None Update="run\next\builder.run">
+    <None Update="next\builder.run">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
-    <None Update="run\next\errors.run">
+    <None Update="next\errors.run">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
-    <None Update="run\next\module.run">
+    <None Update="next\module.run">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
-    <None Update="run\next\program.run">
+    <None Update="next\program.run">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
-    <None Update="run\next\main.run">
+    <None Update="next\main.run">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
-    <None Update="run\next\scanner.run">
+    <None Update="next\scanner.run">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
-    <None Update="run\next\token.run">
+    <None Update="next\token.run">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
     <None Update="run\V10\run.h">
@@ -68,64 +68,64 @@
     <None Update="run\V11\system.run">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
-    <None Update="run\lib\3d\glfw.run">
+    <None Update="lib\3d\glfw.run">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
-    <None Update="run\lib\allocator.h">
+    <None Update="lib\allocator.h">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
-    <None Update="run\lib\allocator.run">
+    <None Update="lib\allocator.run">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
-    <None Update="run\lib\array.run">
+    <None Update="lib\array.run">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
-    <None Update="run\lib\builtin.run">
+    <None Update="lib\builtin.run">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
-    <None Update="run\lib\io.run">
+    <None Update="lib\io.run">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
-    <None Update="run\lib\io\console.run">
+    <None Update="lib\io\console.run">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
-    <None Update="run\lib\io\directory.run">
+    <None Update="lib\io\directory.run">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
-    <None Update="run\lib\io\file.run">
+    <None Update="lib\io\file.run">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
-    <None Update="run\lib\io\filebase.run">
+    <None Update="lib\io\filebase.run">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
-    <None Update="run\lib\io\filereader.run">
+    <None Update="lib\io\filereader.run">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
-    <None Update="run\lib\io\filewriter.run">
+    <None Update="lib\io\filewriter.run">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
-    <None Update="run\lib\io\iwriter.run">
+    <None Update="lib\io\iwriter.run">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
-    <None Update="run\lib\map.run">
+    <None Update="lib\map.run">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
-    <None Update="run\lib\math.run">
+    <None Update="lib\math.run">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
-    <None Update="run\lib\net\socket.run">
+    <None Update="lib\net\socket.run">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
-    <None Update="run\lib\primitives.run">
+    <None Update="lib\primitives.run">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
-    <None Update="run\lib\reflection.run">
+    <None Update="lib\reflection.run">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
-    <None Update="run\lib\string.run">
+    <None Update="lib\string.run">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
-    <None Update="run\lib\system.run">
+    <None Update="lib\system.run">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
     <None Update="tcc\libtcc.dll">
