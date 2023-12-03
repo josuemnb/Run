@@ -17,31 +17,31 @@
   </ItemGroup>
 
   <ItemGroup>
-    <None Update="run\source\ast.run">
+    <None Update="run\next\ast.run">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
-    <None Update="run\source\block.run">
+    <None Update="run\next\block.run">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
-    <None Update="run\source\builder.run">
+    <None Update="run\next\builder.run">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
-    <None Update="run\source\errors.run">
+    <None Update="run\next\errors.run">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
-    <None Update="run\source\module.run">
+    <None Update="run\next\module.run">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
-    <None Update="run\source\program.run">
+    <None Update="run\next\program.run">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
-    <None Update="run\source\main.run">
+    <None Update="run\next\main.run">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
-    <None Update="run\source\scanner.run">
+    <None Update="run\next\scanner.run">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
-    <None Update="run\source\token.run">
+    <None Update="run\next\token.run">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
     <None Update="run\V10\run.h">
@@ -68,64 +68,64 @@
     <None Update="run\V11\system.run">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
-    <None Update="run\V12\lib\3d\glfw.run">
+    <None Update="run\lib\3d\glfw.run">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
-    <None Update="run\V12\lib\allocator.h">
+    <None Update="run\lib\allocator.h">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
-    <None Update="run\V12\lib\allocator.run">
+    <None Update="run\lib\allocator.run">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
-    <None Update="run\V12\lib\array.run">
+    <None Update="run\lib\array.run">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
-    <None Update="run\V12\lib\builtin.run">
+    <None Update="run\lib\builtin.run">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
-    <None Update="run\V12\lib\io.run">
+    <None Update="run\lib\io.run">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
-    <None Update="run\V12\lib\io\console.run">
+    <None Update="run\lib\io\console.run">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
-    <None Update="run\V12\lib\io\directory.run">
+    <None Update="run\lib\io\directory.run">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
-    <None Update="run\V12\lib\io\file.run">
+    <None Update="run\lib\io\file.run">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
-    <None Update="run\V12\lib\io\filebase.run">
+    <None Update="run\lib\io\filebase.run">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
-    <None Update="run\V12\lib\io\filereader.run">
+    <None Update="run\lib\io\filereader.run">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
-    <None Update="run\V12\lib\io\filewriter.run">
+    <None Update="run\lib\io\filewriter.run">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
-    <None Update="run\V12\lib\io\iwriter.run">
+    <None Update="run\lib\io\iwriter.run">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
-    <None Update="run\V12\lib\map.run">
+    <None Update="run\lib\map.run">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
-    <None Update="run\V12\lib\math.run">
+    <None Update="run\lib\math.run">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
-    <None Update="run\V12\lib\net\socket.run">
+    <None Update="run\lib\net\socket.run">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
-    <None Update="run\V12\lib\primitives.run">
+    <None Update="run\lib\primitives.run">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
-    <None Update="run\V12\lib\reflection.run">
+    <None Update="run\lib\reflection.run">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
-    <None Update="run\V12\lib\string.run">
+    <None Update="run\lib\string.run">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
-    <None Update="run\V12\lib\system.run">
+    <None Update="run\lib\system.run">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
     <None Update="tcc\libtcc.dll">
@@ -134,11 +134,6 @@
     <None Update="tcc\tcc.exe">
       <CopyToOutputDirectory>Never</CopyToOutputDirectory>
     </None>
-  </ItemGroup>
-
-  <ItemGroup>
-    <Folder Include="run\V12\lib\net\" />
-    <Folder Include="run\V12\lib\3d\" />
   </ItemGroup>
 
   <Target Name="PreBuild" BeforeTargets="PreBuildEvent">
