@@ -1,0 +1,96 @@
+using scanner
+
+enum TokenKind {
+    NONE
+    ARITMETIC
+    NUMBER
+    NAME
+    DOT
+    LITERAL
+    EQUAL
+    OPEN_PARENTESES
+    CLOSE_PARENTESES
+    QUOTE
+    OPEN_ARRAY
+    CLOSE_ARRAY
+    ASSIGN
+    BITWISE
+    LOGICAL
+    OPEN_BLOCK
+    CLOSE_BLOCK
+    COMMA
+    DECLARE
+    COMMENT
+    MACRO
+    EXPRESSION
+    STATEMENT
+    KEYWORD
+    MODULE
+    FUNCTION
+    BUILTIN
+    VARIABLE
+    RETURN
+    CLASS
+    MINUS
+    BANG
+    PLUS
+    MULTIPLY
+    DIVIDE
+    OR
+    XOR
+    AND
+    NOT
+    CONCATENATE
+    MOD
+    EOF
+    EOL
+    DIFFERENT
+    INCREMENT
+    DECREMENT
+    RANGE
+    GREATHER
+    GREAT_OR_EQUAL
+    LOWER
+    LOWER_OR_EQUAL
+    BITWISE_OR
+    BITWISE_AND
+    ROOT
+    BINARY
+    IF
+    CALLER
+    REAL
+    BOOL
+    TERNARY
+    CHAR
+    AND_ASSIGN
+    OR_ASSIGN
+    MULTIPLY_ASSIGN
+    DIVIDE_ASSIGN
+    MINUS_ASSIGN
+    PLUS_ASSIGN
+    SEMICOLON
+    VA_ARGS
+    SPECIAL
+    SYNTAX
+    AT
+    NOT_EQUAL
+    AS
+    ARROW
+    TREE_WAY
+    SHIFT_RIGHT
+    SHIFT_LEFT
+}
+
+type Token {
+	var value:string
+	var position:i32
+	var column:i32
+	var line:i32
+	var scanner:Scanner
+    var kind:TokenKind
+    var family:TokenKind
+
+    func toString :string => value
+
+    static var Empty: Token
+}

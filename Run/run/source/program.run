@@ -1,0 +1,61 @@
+using module
+using array
+using token
+using ast
+using errors
+
+type Program: Module {
+    var hasErrors: bool
+    var errors: array
+    
+    func addError(msg: string) {
+        hasErrors = true
+        //errors.Add(new Error {
+        //    Message = msg,
+        //    Path = "",
+        //    Code = "",
+        //});
+    }
+
+    func addError(msg: string, ast: AST) {
+        var start:i32
+        var end:i32
+        getStartEnd(ast, start, end)
+        hasErrors = true
+        //errors.Add(new Error {
+        //    Message = msg,
+        //    Token = ast.Token,
+        //    Path = ast.Scanner.Path,
+        //    Code = ast.Scanner.Data.Substring(start, end - start),
+        //});
+    }
+
+    func addError(tok: Token, msg: string) {
+        if (tok == null) => return
+        var start:i32
+        var end:i32
+        getStartEnd(tok, start, end)
+        hasErrors = true
+        //errors.Add(new Error {
+        //    Message = msg,
+        //    Token = tok,
+        //    Path = tok.Scanner.Path,
+        //    Code = tok.Scanner.Data.Substring(start, end - start),
+        //});
+    }
+
+    static func getStartEnd(ast: AST, start:i32, end: i32) {
+        end = ast.scanner.data.indexOf("\n", ast.scanner.position) - 1
+        start = ast.scanner.data.lastIndexOf("\n", (ast.scanner.position >= ast.scanner.size ? ast.scanner.size - 1 : ast.scanner.position) + 1
+        if start < 0 => start = 0
+        if end < start => end = ast.scanner.size
+    }
+
+    static func getStartEnd(token: Token, start: i32, end: i32) {
+        if (token.position + token.value.size) >= token.scanner.size => token.position = token.scanner.size - 1
+        end = token.scanner.data.indexOf("\n", token.position) - 1
+        start = token.scanner.data.lastIndexOf("\n", (token.position >= token.scanner.size) ? token.scanner.size - 1 : token.position) + 1
+        if (start < 0) => start = 0
+        if (end < start) => end = token.scanner.size
+    }
+}

@@ -1,0 +1,612 @@
+using io
+using token
+
+type Scanner {
+	var data:string
+	var size:i32
+	var line:i32
+	var position:i32
+	var column:i32
+	var path:string	
+	var reader:FileReader
+	var current:Token
+
+	this(.path) {
+		this.reader = new FileReader(path, FileReaderMode.READ)
+		this.data = this.reader.readAll()
+		this.size = this.data.size
+		this.line = 1
+		this.position = 0
+		this.column = 0
+	}
+
+	func getToken:Token {
+		setup()
+
+		if position>= size {
+			return null
+		}
+
+		var ok:bool
+		current = new Token()
+		current.line = line	
+		current.column = column
+		current.position = position
+		current.scanner = this
+		
+		if isEOL() {
+			position++
+            line++
+            current.column = column = 0
+            current.kind = TokenKind.EOL
+            current.value = "\n"
+            return current
+		}
+		if(isNumber(current)) => return current
+        if (isValidCharacter(current)) => goto end
+        if (valid && (data[position].isAlpha) || (data[position] == '_') {
+            var start = position
+            for var i = 0; i < 3 && data[position] == '_'; i++ => position++ 
+            var p = position
+            for valid && ((data[position].isAlNum) || (data[position] == '_')) => position++
+            if (p == position) => return false
+            if valid && (data[position] == '_') => return false
+            current.value = data.substring(start, position - start)
+            if current.value == "as" {
+                current.kind = TokenKind.AS
+                current.family = TokenKind.KEYWORD
+            } else {
+                current.kind = TokenKind.NAME
+                current.family = TokenKind.NAME
+            }
+        } else {
+            ok = false
+		}
+        label end
+        column += current.value.size
+		return current
+	}
+
+	func skip(newLines:bool):bool {
+		setup()
+		if position <0 {
+			position = 0
+			column = 0
+		}
+		if data == null || size<=position {
+			return false
+		}
+		for position < size && (data[position] == '\t' || data[position] == ' ') || (newLines && (data[position] == '\n' || data[position] == '\r')) {
+			position++
+			column++
+		}
+		if size <= position {
+			return false
+		}
+		return true
+	}
+
+	func test(kind:TokenKind):bool {
+		var token = test()
+		return token.kind == kind
+	}
+
+	func testFamily(family:TokenKind):bool {
+		var token = test()
+		return token.family == family
+	}
+
+    func rollBack => rollBack(current)
+
+    func rollBack(tok:Token) {
+		if tok.value!=null {        
+            line = tok.line
+            position = tok.position
+            column = tok.column
+            current = null
+        }
+	}
+
+     func peek:i8 {
+        if skip(false)==false => return i8.max
+        if valid==false => return i8.max
+        return data[position]
+    }
+
+	func walk {
+		position++
+		column++	
+	}
+
+	func test(): Token {
+		var cur = current
+		var pos = position
+		var col = column
+		var token = getToken()
+		if token!=null {
+			current = cur
+			position = pos
+			column = col
+		}
+		return token
+	}
+
+	property valid:bool => position < size
+
+	func skipLine:bool {
+		var ret:bool
+		for valid && (data[position] != '\n') {
+			if data[position] == '{' {
+				ret = true
+			}
+			position++
+		}
+		column = 0
+		return ret
+	}
+
+    func skipBlock {
+        var block = skipLine() ? 1 : 0
+        for block > 0 {
+            if (data == null) || (size == 0) || (valid==false) => return
+            switch (data[position]) {
+                case '{' => block++
+                case '}' {
+                    block--
+                    if (block <= 0) => return
+                }
+                case '\n' {
+                    column = 0
+                    if (block <= 0) => return
+                }
+            }
+            column++
+            position++
+        }
+    }
+
+     func expect(ch:i8):bool {
+        if skip(false) == false => return false
+        if valid == false => return false
+        if (data[position] != ch) => return false
+
+        current = new Token()
+        current.column = column
+        current.scanner = this
+        current.value = ch.toString()
+        current.line = line
+        current.position = position
+
+        if isValidCharacter(current) == false => return false
+        column += current.value.size
+        return true
+    }
+
+     func expect(exp:string):bool {
+        if (exp==null) || (skip(false)==false) => return false
+        var len = exp.size  
+        if len == 0 => return false
+        if (position + len >= size) => return false
+        for var i = 0; i < len; i++ {
+            if (data[position + i] != exp[i]) => return false
+        }
+
+        current = new Token()
+        current.column = column
+        current.scanner = this
+        current.value = exp
+        current.line = line
+        current.position = position
+
+        position += size
+        column += size
+        return true
+    }
+
+    func getName(back: bool):Token {
+        var cur = current
+        var scan = getToken()
+        if (scan == null) => return null
+        if (scan.kind != TokenKind.NAME) {
+            if (back) {
+                rollBack()
+                current = cur
+            }
+            return null
+        }
+        return scan
+    }
+
+    func until(delimeter:string):Token {
+        var idx = data.indexOf(delimeter, position)
+        if (idx < 0) => return Token.Empty
+        var token = new Token()
+        token.column = column
+        token.scanner = this
+		token.value = data.substring(position, idx - position)
+        token.line = line
+        token.position = position
+        
+        position += token.value.size
+        column += token.value.size
+        return token
+    }
+
+	func isValidCharacter(tok:Token):bool {
+            tok.kind = 0 as TokenKind
+            if (valid==false) => return false
+            var start = position
+            var len:i32
+            switch data[position] {
+                case '\r', '\n' {
+                    for (valid && (data[position] == '\r' || data[position] == '\n')) {
+                        if (data[position] == '\n') => line++
+                        position++
+                    }
+                    column = 0
+                    tok.kind = TokenKind.EOL
+                    tok.family = TokenKind.SYNTAX
+                    tok.value = data.substring(start, 1)
+                }
+                case '#' {
+                    tok.kind = TokenKind.MACRO
+                    tok.family = TokenKind.SYNTAX
+                    tok.value = data.substring(start, 1)
+                }
+                case '@' {
+                    tok.kind = TokenKind.AT
+                    tok.family = TokenKind.SYNTAX
+                    tok.value = data.substring(start, 1)
+                }
+                case '?' {
+                    tok.kind = TokenKind.TERNARY
+                    tok.family = TokenKind.SYNTAX
+                    tok.value = data.substring(start, 1)
+                }
+                case '+' {
+                    if (valid && data[position + 1] == '+') {
+                        position++
+                        len = 1
+                        tok.kind = TokenKind.INCREMENT
+                        tok.family = TokenKind.ARITMETIC
+                    } else if (valid && data[position + 1] == '=') {
+                        len = 1
+                        tok.kind = TokenKind.PLUS_ASSIGN
+                        tok.family = TokenKind.ARITMETIC
+                        position++
+                    } else {
+                        tok.kind = TokenKind.PLUS
+                        tok.family = TokenKind.ARITMETIC
+                    }
+                    tok.value = data.substring(start, (isDouble(data[position]) ? 2 : 1) + len)
+                }
+                case '-' {
+                    if (valid && data[position + 1] == '-') {
+                        len = 1
+                        position++
+                        tok.kind = TokenKind.DECREMENT
+                        tok.family = TokenKind.ARITMETIC
+                    } else if (valid && data[position + 1] == '=') {
+                        len = 1
+                        tok.kind = TokenKind.MINUS_ASSIGN
+                        tok.family = TokenKind.ARITMETIC
+                        position++
+                    } else {
+                        tok.kind = TokenKind.MINUS
+                        tok.family = TokenKind.ARITMETIC
+                    }
+                    tok.value = data.substring(start, (isDouble(data[position]) ? 2 : 1) + len)
+                }
+                case '/' {
+                    if (valid && data[position + 1] == '*') {
+                        position++
+                    //again:
+                        for (valid && data[position] != '*') =>  position++
+                        if (valid && data[position + 1] != '/') {
+                            position++
+                      //      goto again
+                        }
+                        tok.kind = TokenKind.COMMENT
+                        tok.family = TokenKind.SYNTAX
+                        len = position - start
+                    }
+                    if (valid && data[position + 1] == '/') {
+                        len = 2
+                        position++
+                        tok.kind = TokenKind.COMMENT
+                        tok.family = TokenKind.SYNTAX
+                    } else if (valid && data[position + 1] == '=') {
+                        len = 2
+                        tok.kind = TokenKind.DIVIDE_ASSIGN
+                        tok.family = TokenKind.ARITMETIC
+                        position++
+                    } else {
+                        tok.kind = TokenKind.DIVIDE
+                        tok.family = TokenKind.ARITMETIC
+                    }
+                    tok.value = data.substring(start, (isDouble(data[position]) ? 2 : 1) + len)
+                }
+                case '*' {
+                    if (valid && data[position + 1] == '=') {
+                        len = 1
+                        tok.kind = TokenKind.MULTIPLY_ASSIGN
+                        tok.family = TokenKind.ARITMETIC
+                        position++
+                    } else {
+                        tok.kind = TokenKind.MULTIPLY
+                        tok.family = TokenKind.ARITMETIC
+                    }
+                    tok.value = data.substring(start, (isDouble(data[position]) ? 2 : 1) + len)
+                }
+                case ',' {
+                    tok.kind = TokenKind.COMMA
+                    tok.family = TokenKind.SYNTAX
+                    tok.value = data.substring(start, 1)
+                }
+                case ';' {
+                    tok.kind = TokenKind.SEMICOLON
+                    tok.family = TokenKind.SYNTAX
+                    tok.value = data.substring(start, 1)
+                }
+                case ':' {
+                    tok.kind = TokenKind.DECLARE
+                    tok.family = TokenKind.SYNTAX
+                    tok.value = data.substring(start, 1)
+                }
+                case '%' {
+                    tok.kind = TokenKind.MOD
+                    tok.family = TokenKind.ARITMETIC
+                    tok.value = data.substring(start, 1)
+                }
+                case '{', '}' {
+                    tok.family = TokenKind.SYNTAX
+                    tok.kind = data[position] == '{' ? TokenKind.OPEN_BLOCK : TokenKind.CLOSE_BLOCK
+                    tok.value = data.substring(start, 1)
+                }
+                case '[', ']' {
+                    tok.family = TokenKind.SYNTAX
+                    tok.kind = data[position] == '[' ? TokenKind.OPEN_ARRAY : TokenKind.CLOSE_ARRAY
+                    tok.value = data.substring(start, 1)
+                }
+                case '(', ')' {
+                    tok.family = TokenKind.SYNTAX
+                    tok.kind = data[position] == '(' ? TokenKind.OPEN_PARENTESES : TokenKind.CLOSE_PARENTESES
+                    tok.value = data.substring(start, 1)
+                }
+                case '=' {
+                    if (valid && data[position + 1] == '=') {
+                        position++
+                        tok.kind = TokenKind.EQUAL
+                        tok.family = TokenKind.LOGICAL
+                        tok.value = data.substring(start, 2)
+                    } else if (valid && data[position + 1] == '>') {
+                        position++
+                        tok.kind = TokenKind.ARROW
+                        tok.family = TokenKind.SYNTAX
+                        tok.value = data.substring(start, 2)
+                    } else {
+                        tok.kind = TokenKind.ASSIGN
+                        tok.family = TokenKind.ARITMETIC
+                        tok.value = data.substring(start, 1)
+                    }
+                }
+                case '.' {
+                    tok.family = TokenKind.SYNTAX
+                    if (valid && data[position + 1] == '.') {
+                        position++
+                        tok.kind = TokenKind.RANGE
+                        tok.value = data.substring(start, 2)
+                        if (valid && data[position + 1] == '.') {
+                            position++
+                            tok.kind = TokenKind.VA_ARGS
+                            tok.value = data.substring(start, 3)
+                        }
+                    } else {
+                        tok.kind = TokenKind.DOT
+                        tok.value = data.substring(start, 1)
+                    }
+                }
+                case '>' {
+                    len = 1
+                    tok.kind = TokenKind.GREATHER
+                    tok.family = TokenKind.LOGICAL
+                    if (valid && data[position + 1] == '=') {
+                        tok.kind = TokenKind.GREAT_OR_EQUAL
+                        tok.family = TokenKind.LOGICAL
+                        position++
+                        len = 2
+                    } else if (valid && data[position + 1] == '>') {
+                        tok.kind = TokenKind.SHIFT_RIGHT
+                        tok.family = TokenKind.ARITMETIC
+                        position++
+                        len = 2
+                    }
+                    tok.value = data.substring(start, len)
+                }
+                case '<' {
+                    len = 1
+                    tok.kind = TokenKind.LOWER
+                    tok.family = TokenKind.LOGICAL
+                    if (valid && data[position + 1] == '=') {
+                        position++
+                        if (valid && data[position + 1] == '>') {
+                            position++
+                            tok.kind = TokenKind.TREE_WAY
+                            len = 3
+                        } else {
+                            tok.kind = TokenKind.LOWER_OR_EQUAL
+                            len = 2
+                        }
+                    } else if (valid && data[position + 1] == '<') {
+                        tok.kind = TokenKind.SHIFT_LEFT
+                        tok.family = TokenKind.ARITMETIC
+                        position++
+                        len = 2
+                    }
+                    tok.value = data.substring(start, len)
+                }
+                case '!' {
+                    len = 1
+                    tok.kind = TokenKind.BANG
+                    tok.family = TokenKind.LOGICAL
+                    if (valid && data[position + 1] == '=') {
+                        tok.kind = TokenKind.DIFFERENT
+                        position++
+                        len = 2
+                    }
+                    tok.value = data.substring(start, len)
+                }
+                case '&' {
+                    len = 1
+                    tok.kind = TokenKind.BITWISE_AND
+                    tok.family = TokenKind.LOGICAL
+                    if (valid && data[position + 1] == '&') {
+                        tok.kind = TokenKind.AND
+                        position++
+                        len = 2
+                    } else if (valid && data[position + 1] == '=') {
+                        len = 2
+                        tok.kind = TokenKind.AND_ASSIGN
+                        position++
+                    }
+                    tok.value = data.substring(start, len)
+                }
+                case '|' {
+                    len = 1
+                    tok.kind = TokenKind.BITWISE_OR
+                    tok.family = TokenKind.LOGICAL
+                    if (valid && data[position + 1] == '|') {
+                        tok.kind = TokenKind.OR
+                        position++
+                        len = 2
+                    } else if (valid && data[position + 1] == '=') {
+                        len = 2
+                        tok.kind = TokenKind.OR_ASSIGN
+                        position++
+                    }
+                    tok.value = data.substring(start, len)
+                }
+                case '^' {
+                    tok.kind = TokenKind.XOR
+                    tok.family = TokenKind.LOGICAL
+                    tok.value = data.substring(start, 1)
+                }
+                case '"' {
+                    position++
+                    for (valid && data[position] != '"') {
+                        if (data[position] == '\\') {
+                            switch (data[position]) {
+                                case '\\' , 't' , 'n' , 'r' , 'b' , '0' , '\'' , '"' => position++
+                            }
+                        }
+                        position++
+                    }
+                    tok.kind = TokenKind.QUOTE
+                    tok.family = TokenKind.LITERAL
+                    tok.value = "\"" + data.substring(start + 1, position - start - 1) + "\""
+                }
+                case '\'' {
+                    position++
+                    var temp = position
+                    var empty = true
+                    if (valid && data[position] == '\\') {
+                        position++
+                        empty = false
+                        switch (data[position]) {
+                            case '\\', 't', 'n', 'r', 'b', '0', '\'', '"' => position++
+                            default => return false
+                        }
+                    } else if (valid && data[position] != '\'') {
+                        position++
+                        empty = false
+                    }
+                    if (valid && data[position] == '\'') {
+                        tok.kind = TokenKind.CHAR
+                        tok.family = TokenKind.LITERAL
+                        tok.value = empty ? "0" : ("'" + data.substring(temp, position - temp) + "'")
+                    }
+                }
+                default => return false
+            }
+            position++
+            return tok.kind != 0 as TokenKind
+        }
+
+	func isNumber(tok:Token):bool {
+        if (valid==false) => return false
+        if (data[position] == '-') {
+            if (data[position + 1].isDigit) {
+                position++
+                getNumber(tok, false)
+                return true
+            }
+        } else if (data[position].isDigit) {
+            getNumber(tok, true)
+            return true
+        }
+        return false
+    }
+
+    func isDouble(ch:i8):bool {
+        if (valid && (position + 1) < size && data[position + 1] == ch) {
+            position++
+            return true
+        }
+        return false
+    }
+
+	func getReal(tok:Token) {
+            tok.kind = TokenKind.REAL
+            for (valid && data[position].isDigit) {
+                position++
+            }
+            if (valid && (data[position] == 'e' || data[position] == 'E')) {
+                position++
+                if (valid && (data[position] == '+' || data[position] == '-')) {
+                    position++
+                }
+                for (valid && data[position].isDigit) {
+                    position++
+                }
+            }
+        }
+
+	func getNumber(tok:Token, positive:bool) {
+            var start = position
+            tok.kind = TokenKind.NUMBER
+            tok.family = TokenKind.LITERAL
+            for (valid && data[position].isDigit) {
+                position++
+            }
+            if (valid && data[position] == '.') {
+                position++
+                getReal(tok)
+            }
+            tok.value = (positive ? "" : "-") + data.substring(start, position - start)
+        }
+
+	func isEOL:bool {
+		if skip(false)==false {
+            return true
+		}
+        if (valid==false) || (data[position] == '\n') || (data[position] == '\r') {
+            if (data[position] == '\r') {
+                position++
+            }
+            column = 0
+            return true
+        }
+        return false
+	}
+
+
+	func setup {
+		if (position == -1) && (reader != null) {
+			position = 0
+			data = reader.readAll()
+			size = data.size
+			reader.close()
+			reader = null
+		}
+	}
+}

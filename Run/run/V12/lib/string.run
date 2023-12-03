@@ -1,0 +1,126 @@
+// VERY IMPORTANT
+// DO NOT CHANGE THIS FILE
+
+using system
+using primitives
+
+@native(char)
+@array(i8)
+type string {
+
+	property size:i32 {
+		get {
+			var	m_size = 0
+			for ;this[m_size]!=0;m_size++ { }
+			return m_size
+		}
+	}
+
+	property empty:bool => size == 0
+
+	func indexOf(s:string):i32 => indexOf(s,0)
+
+	func indexOf(s:string, start:i32):i32 {
+		var myLen = size
+		var sLen = s.size
+		for var i=start;i<myLen - sLen;i++ {
+			if s[0]!=this[i] => continue
+			if sLen == 1 => return i
+			var found = true
+			for var l=1;l<sLen;l++ {
+				if s[l]!=this[i + l] {
+					found = false
+					break
+				}
+			}
+			if found => return i
+		}
+		return -1
+	}
+
+	func lastIndexOf(s:string, start:i32): i32 {
+		var myLen = size
+		var sLen = s.size
+		if start > myLen => start = myLen
+		for var i = start; i >= 0; i-- {
+			if s[0] != this[i] => continue
+			if sLen == 1 => return i
+			var found = true
+			for var l=1; l < sLen; l++ {
+				if s[l] != this[i + l] {
+					found = false
+					break
+				}
+			}
+			if found => return i
+		}
+		return -1
+	}
+
+	func lastIndexOf(s:string):i32 => lastIndexOf(s,size)
+
+	func contains(s:string):bool => indexOf(s) >= 0
+
+	func append(s:string):string {
+		var sz = size
+		var len = sz + s.size + 1
+		var temp = new i8[len]
+		copy(temp as pointer,this as pointer,sz)
+		copy(temp as pointer,s as pointer,s.size,0,sz)
+		temp[len] = 0
+		return temp
+	}
+
+	func substring(start:i32):string => substring(start,size)
+
+	func substring(start:i32, end:i32):string {
+		var len = (end - start) + 1
+		var temp = new i8[len]
+		copy(temp as pointer,this as pointer,len - 1, start)
+		temp[len] = 0
+		return temp as string
+	}
+
+	func clone:string {
+		var sz = size + 1
+		var s = new i8[sz]
+		copy(s as pointer,this as pointer,sz)
+		return s as string	
+	}
+
+	func equals(s:string):bool {
+		var sz = size
+		if sz != s.size => return false
+		for var i=0;i<sz;i++ => if this[i]!=s[i] => return false
+		return true
+	}
+
+	property hashCode:i32 {
+		get {
+			var hash = 1
+			var sz = size
+			for var i=0;i<sz;i++ {
+				hash = (hash * 31) + this[i]
+			}
+			return hash
+		}
+	}
+
+	func repeat(count:i32): string {
+		var myLen = size
+		var sz = (count * myLen) + 1
+		var s = new i8[sz]
+		for var i=0;i<count;i++ {
+			for var l=0;l<myLen;l++ {
+				s[(i * myLen) + l] = this[l]
+			}
+		}
+		s[count] = 0
+		return s
+	}
+
+	operator ==(s:string):bool => equals(s)
+	operator !=(s:string):bool => equals(s)==false
+
+	operator +(s:string):string => append(s)
+}

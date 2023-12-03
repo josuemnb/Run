@@ -1,0 +1,40 @@
+// VERY IMPORTANT
+// DO NOT CHANGE THIS FILE
+
+@native(remove($path):i32)
+@header(stdio.h)
+func remove(path:string):i32
+
+@native(rename($from,$to):i32)
+@header(stdio.h)
+func rename(from:string,to:string):i32	
+
+@native(CopyFile($from,$to,$fail))
+@header(windows.h)
+func copyFile(from:string,to:string,fail:i32):i32
+
+@native(access($path,$mode))
+@header(sys/unistd.h)
+func access(path:string,mode:i32):i32
+
+using filereader	
+using filewriter
+
+static type File {
+
+	static func delete(path:string):bool => remove(path) == 0
+
+	static func move(from:string,to:string):bool => rename(from,to) == 0
+
+	static func copy(from:string,to:string,fail:bool):bool => copyFile(from,to,fail?1:0) == 0
+
+	static func exists(path:string):bool => access(path,0) != -1
+
+	static func open(path:string):FileReader => new FileReader(path,FileReaderMode.READ)
+
+	static func openBinary(path:string):FileReader => new FileReader(path,FileReaderMode.READ_BINARY)
+
+	static func create(path:string):FileWriter => new FileWriter(path,FileWriterMode.WRITE)
+
+	static func append(path:string):FileWriter => new FileWriter(path,FileWriterMode.APPEND)
+}

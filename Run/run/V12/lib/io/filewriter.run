@@ -1,0 +1,88 @@
+// VERY IMPORTANT
+// DO NOT CHANGE THIS FILE
+
+using filebase
+using iwriter
+
+enum FileWriterMode {
+	WRITE = "w"
+	WRITE_BINARY = "wb"
+	APPEND = "a"
+	APPEND_BINARY = "ab"
+}
+
+type FileWriter: FileBase, IWriter {
+	var mode:FileWriterMode
+
+	this(.path,.mode) {
+		fp = fopen(path,mode as string)
+		opened = true
+		ended = 0
+	}
+
+	func writeInternal(value:pointer, length:i32, newLine:bool) {
+		if ok == false => return
+		fwrite(value,length,1,fp)
+		if newLine => fwrite("\n" as pointer,1,1,fp)
+	}
+
+	func flush() {
+		if ok == false => return
+		fflush(fp)
+	}
+
+	func write(b:byte[], start:i32, count:i32) {
+		if ok == false => return
+		fwrite(((b as pointer) + start) as pointer,count,1,fp)
+	}
+
+	func write(value:i32) => writeInternal(ref value,4,false)
+
+	func write(value:i64) => writeInternal(ref value,8,false)
+
+	func write(value:i16) => writeInternal(ref value,2,false)
+
+	func write(value:i8) => writeInternal(ref value,1,false)
+
+	func write(value:u32) => writeInternal(ref value,4,false)
+
+	func write(value:u64) => writeInternal(ref value,8,false)
+
+	func write(value:u16) => writeInternal(ref value,2,false)
+
+	func write(value:f32) => writeInternal(ref value,4,false)
+
+	func write(value:f64) => writeInternal(ref value,8,false)
+
+	func write(value:string) => writeInternal(value as pointer, value.size,false)
+
+	func writeLine(value:i32) => writeInternal(ref value,4,true)
+
+	func writeLine(value:i64) => writeInternal(ref value,8,true)
+
+	func writeLine(value:i16) => writeInternal(ref value,2,true)
+
+	func writeLine(value:i8) => writeInternal(ref value,1,true)
+
+	func writeLine(value:u32) => writeInternal(ref value,4,true)
+
+	func writeLine(value:u64) => writeInternal(ref value,8,true)
+
+	func writeLine(value:u16) => writeInternal(ref value,2,true)
+
+	func writeLine(value:f32) => writeInternal(ref value,4,true)
+
+	func writeLine(value:f64) => writeInternal(ref value,8,true)
+
+	func writeLine(value:string) => writeInternal(value as pointer, value.size,true)
+
+	func writeLine() {
+		if ok == false => return
+		fwrite("\n" as pointer,1,1,fp)
+	}
+
+	func dispose {
+		if ok == false => return
+		close()
+	}
+}

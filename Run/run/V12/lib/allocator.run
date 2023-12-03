@@ -1,0 +1,58 @@
+interface IAllocator {
+	func initialize {}
+	func alloc(size: i32): pointer {}
+	func free(ptr: pointer) {}
+	func realloc(ptr: pointer, size: i32): pointer {}
+}
+
+type MemoryPage {
+	var items: i32
+	var ptr: pointer
+	var offset: i32
+	var size: i32
+	var capacity: i32
+	var id: i32
+	var next: MemoryPage
+	var previous: MemoryPage
+
+	this(.capacity) {
+		ptr = alloc(capacity)
+	}
+
+	func add(capacity: i32): MemoryPage {
+		var page = new MemoryPage(capacity)
+		page.previous = this
+		page.id = id
+		next = page
+		return page
+	}
+}
+
+type PageAlloction {
+	var page: MemoryPage
+	var ptr: pointer
+}
+
+static type Allocator: IAllocator {
+	static var CurrentPage: MemoryPage
+
+	static func initialize() {
+		CurrentPage = new MemoryPage(1024 * 1024)
+		CurrentPage.id = 0
+	}
+
+	static func alloc(size: i32): pointer {
+		var page = CurrentPage
+		for page != null {
+			if (page.capacity - page.offset) >= size {
+				var ptr = page.ptr + page.offset
+				page.offset += size
+				CurrentPage  = page
+				return ptr
+			}
+			page = page.next
+		}
+		CurrentPage = CurrentPage.add(size)
+		return CurrentPage.ptr
+	}
+}
