@@ -142,7 +142,7 @@
   </ItemGroup>
 
   <Target Name="PreBuild" BeforeTargets="PreBuildEvent">
-    <Exec Command="xcopy &quot;$(ProjectDir)tcc\*.*&quot; &quot;$(TargetDir)\run\V12\tcc\&quot; /Y /I /E&#xD;&#xA;xcopy &quot;$(ProjectDir)GLFW\*.*&quot; &quot;$(TargetDir)\run\V12\GLFW\&quot; /Y /I /E" />
+    <Exec Command="xcopy &quot;$(ProjectDir)tcc\*.*&quot; &quot;$(TargetDir)\run\V12\tcc\&quot; /Y /I /E" />
   </Target>
 
 </Project>
