@@ -135,6 +135,7 @@
             c.Usage++;
             foreach (var v in c.Children) {
                 Count(v as Var);
+                //Count(v);
             }
             //Count(c as Block);
             if (c.Base is Class b) {

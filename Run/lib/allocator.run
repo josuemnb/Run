@@ -7,11 +7,11 @@ interface IAllocator {
 
 type MemoryPage {
 	var items: i32
-	var ptr: pointer
 	var offset: i32
 	var size: i32
 	var capacity: i32
 	var id: i32
+	var ptr: pointer
 	var next: MemoryPage
 	var previous: MemoryPage
 
@@ -20,12 +20,15 @@ type MemoryPage {
 	}
 
 	func add(capacity: i32): MemoryPage {
+		if capacity <= 1024*1024 => capacity = 1024*1024
 		var page = new MemoryPage(capacity)
 		page.previous = this
 		page.id = id
 		next = page
 		return page
 	}
+
+	property available:i32 => capacity - offset 
 }
 
 type PageAlloction {
@@ -33,26 +36,82 @@ type PageAlloction {
 	var ptr: pointer
 }
 
+type MemoryInfo {
+	var kind: i32
+	var size: i32
+	var page: MemoryPage
+	var magic: i16
+	var ptr: pointer
+}
+
 static type Allocator: IAllocator {
 	static var CurrentPage: MemoryPage
+	static var HeadPage: MemoryPage
+	static var Magic = 12345
 
 	static func initialize() {
 		CurrentPage = new MemoryPage(1024 * 1024)
+		HeadPage = CurrentPage
 		CurrentPage.id = 0
 	}
 
-	static func alloc(size: i32): pointer {
-		var page = CurrentPage
+	static func getAvailablePage(size: i32): MemoryPage {
+		var page = HeadPage
 		for page != null {
-			if (page.capacity - page.offset) >= size {
-				var ptr = page.ptr + page.offset
-				page.offset += size
-				CurrentPage  = page
-				return ptr
-			}
+			if page.available >= size => return page
+			if page.next == null => break
 			page = page.next
 		}
-		CurrentPage = CurrentPage.add(size)
-		return CurrentPage.ptr
+		return page.add(size)
+	}
+
+	static func alloc(size: i32): pointer {
+		var page = getAvailablePage(size)
+		var info = setInfo(page, size, 0)
+		page.offset += size
+		page.items++
+		CurrentPage  = page
+		return info.ptr
+	}
+
+	static func free(ptr: pointer) {
+		var info = getInfo(ptr)
+
+		if (info == null) || (info.magic != Magic) => return
+
+		info.page.items--
+		info.page.size -= info.size
+		info.kind = 0
+	}
+
+	static func realloc(ptr: pointer, size: i32): pointer {
+		var info = getInfo(ptr)
+
+		if (info == null) || (info.magic != Magic) => return null
+		if info.size >= size => return ptr
+
+		info.page.items--
+		info.page.size -= info.size
+		info.kind = 0
+		var newPtr = alloc(size)
+		copy(ptr, newPtr, info.size)
+		return newPtr
+	}
+
+	static func setInfo(page: MemoryPage, size:i32, kind:i32): MemoryInfo {
+		var ptr = (page.ptr + page.offset) as pointer
+		var p = ptr as MemoryInfo
+		p.kind = kind
+		p.size = size
+		p.page = page
+		p.magic = Magic
+		p.ptr = (ptr + 14) as pointer
+		return p
+	}
+
+	static func getInfo(ptr: pointer): MemoryInfo {
+		var info = (ptr - 14) as MemoryInfo
+		if info.magic != Magic => return null
+		return info
 	}
 }

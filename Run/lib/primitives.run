@@ -14,8 +14,9 @@ func abs(x:i32):i32
 @header(stdio.h)
 func sprintf(s:i8[], fmt:string, ...args:any)
 
-@primitive
-@native(void*)
+//TODO rever se deve ser primitiva e void*
+//@primitive
+@native(char)
 type pointer { }
 
 static type NumberHelper {

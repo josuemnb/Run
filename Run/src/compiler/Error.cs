@@ -57,6 +57,9 @@
         public static readonly string InterfaceMemberNotFound = "Interface member not found";
         public static readonly string InterfaceCannotBeBased = "Interface cannot have base class or interface";
         public static readonly string GenericNameAlreadyClassDefined = "Generic name already class defined";
+        public static readonly string InterfaceMemberHasDifferentReturnType = "Interface member has different return type";
+        public static readonly string InterfaceMemberHasDifferentParameters = "Interface member has different parameters";
+        public static readonly string InterfaceNotImplementedCorrect = "Interface not implemented correct";
 
         public override string ToString() {
             if (Token == null || Token.Value == null) {

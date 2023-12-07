@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Runtime.InteropServices;
 using System.Text;
 
 namespace Run.V12 {
@@ -39,8 +38,15 @@ namespace Run.V12 {
             RegisterClassesArrays();
             RegisterEnums();
             RegisterFunctions();
+            ValidateInterfaces();
             if (Program.HasErrors == false) {
                 Program.PrintOk(position);
+            }
+        }
+
+        private void ValidateInterfaces() {
+            foreach (var cls in Classes.Values) {
+                ValidateInterfaces(cls);
             }
         }
 
@@ -139,9 +145,7 @@ namespace Run.V12 {
                 SetDefaultConstructor(cls);
             }
             foreach (var cls in Classes.Values.ToArray()) {
-                //ValidateClass(cls);
                 ValidateBased(cls);
-                ValidateInterfaces(cls);
                 //if (cls.HasGenerics)
                 //    ValidateGenerics(cls, cls.Generics);
             }
@@ -187,24 +191,6 @@ namespace Run.V12 {
             return true;
         }
 
-        bool ValidateClass(Class cls) {
-            if (cls == null) return true;
-            if (cls.IsBased) {
-                if (ValidateBased(cls.Base) == false) {
-                    return false;
-                }
-            }
-            if (Classes.ContainsKey(cls.Token.Value) == false) {
-                Program.AddError(cls.BaseToken.Token, Error.UnknownType);
-                return false;
-            }
-            ValidateInterfaces(cls);
-            //if (cls.HasGenerics) {
-
-            //}
-            return true;
-        }
-
         //private Class ValidateGenerics(Class cls, List<Generic> generics) {
         //    if (generics == null || generics.Count == 0 || cls.HasGenerics == false) return cls;
         //    for (int i = 0; i < generics.Count; i++) {
@@ -226,15 +212,63 @@ namespace Run.V12 {
         //}
 
         void ValidateInterfaces(Class cls) {
+            if (cls.IsBased) {
+                if (GetInterface(cls.BaseToken.Token, false) is Interface ifc) {
+                    cls.Interfaces ??= new(1);
+                    cls.Interfaces.Add(ifc);
+                }
+            }
             if (cls.HasInterfaces == false) return;
             for (int i = 0; i < cls.Interfaces.Count; i++) {
                 var inter = cls.Interfaces[i];
-                if (Classes.TryGetValue(inter.Token.Value, out Class face) == false) {
-                    Program.AddError(inter.Token, Error.UnknownType);
-                    continue;
+                var iFace = GetInterface(inter.Token);
+                if (iFace == null) continue;
+                bool ok = false;
+                foreach (var child in cls.Children) {
+                    if (child is Function func) {
+                        if (CheckInterface(iFace, func)) {
+                            ok = true;
+                            break;
+                        }
+                    }
                 }
-                cls.Interfaces[i] = face as Interface;
+                if (ok) {
+                    cls.Interfaces[i] = iFace;
+                } else {
+                    Program.AddError(inter.Token, Error.InterfaceNotImplementedCorrect);
+                }
             }
+        }
+
+        bool CheckInterface(Interface face, Function func) {
+            if (face.FindMember<Function>(func.Token.Value) is Function f) {
+                if (f.Parameters?.Children?.Count != func.Parameters?.Children?.Count) {
+                    Program.AddError(func.Token, Error.InterfaceMemberHasDifferentParameters, true);
+                    return false;
+                }
+                if (f.Type == null && func.Type == null) {
+                    return true;
+                }
+                if (f.Type.Token.Value != func.Type.Token.Value) {
+                    Program.AddError(func.Token, Error.InterfaceMemberHasDifferentReturnType, true);
+                    return false;
+                }
+                return true;
+            }
+            return false;
+        }
+
+        Interface GetInterface(Token token, bool addError = true) {
+            if (Classes.TryGetValue(token.Value, out Class face) == false) {
+                Program.AddError(token, Error.UnknownType);
+                return null;
+            }
+            var iFace = face as Interface;
+            if (iFace == null && addError) {
+                Program.AddError(token, Error.UnknownName);
+                return null;
+            }
+            return iFace;
         }
 
         public void SetRealName(AST ast) {

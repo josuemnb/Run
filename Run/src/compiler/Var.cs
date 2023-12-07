@@ -106,6 +106,10 @@ namespace Run.V12 {
                         Type = Initializer.Type;
                     }
                 }
+                if (Type == null) {
+                    Error.NullType(this);
+                    return;
+                }
                 writer.Write(Type.Real ?? Type.Token.Value);
                 writer.Write(' ');
                 if (Type.IsPrimitive == false) {

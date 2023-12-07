@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 
 namespace Run.V12 {
@@ -500,6 +501,8 @@ namespace Run.V12 {
                     array.Save(writer, builder);
                     break;
                 case MemberAccess access:
+                    This.Save(writer, builder);
+                    writer.Write("->");
                     access.Save(writer, builder);
                     break;
                 case Caller call:
@@ -526,9 +529,14 @@ namespace Run.V12 {
                         en.Save(writer, builder);
                         break;
                     }
-                    This.Save(writer, builder);
+                    if (Parent is MemberAccess) {
+                        writer.Write(This.Token.Value);
+                    } else {
+                        This.Save(writer, builder);
+                    }
                     writer.Write("->");
                     writer.Write(id.Token.Value);
+                    //id.Save(writer, builder);
                     break;
                 default:
                     This.Save(writer, builder);
@@ -791,7 +799,8 @@ namespace Run.V12 {
         public override void Save(TextWriter writer, Builder builder) {
             if (Expression.Type.IsPrimitive) {
                 writer.Write("&(");
-            } else if (Expression.Type.IsNumber) {
+            } else
+            if (Expression.Type.IsNumber) {
                 writer.Write("&(");
             } else {
                 writer.Write("*(");

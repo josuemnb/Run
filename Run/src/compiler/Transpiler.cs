@@ -674,7 +674,6 @@ namespace Run.V12 {
                 if (func.IsNative || (func is Constructor ctor && ctor.Type.Access == AccessType.STATIC)) {
                     continue;
                 }
-
                 //if (func.Usage == 0) continue;
                 if (func.Usage == 0) {
                     var c = func as Constructor;

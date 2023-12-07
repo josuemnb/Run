@@ -104,11 +104,11 @@ namespace Run.V12 {
             });
         }
 
-        public void AddError(Token tok, string msg) {
+        public void AddError(Token tok, string msg, bool force = false) {
             if (tok == null) return;
             if (Errors.Count > 0) {
                 var last = Errors[Errors.Count - 1];
-                if (last.Token.Scanner == tok.Scanner && last.Token.Line == tok.Line) return;
+                if (force == false && last.Token.Scanner == tok.Scanner && last.Token.Line == tok.Line) return;
             }
             GetStartEnd(tok, out int start, out int end);
             HasErrors = true;

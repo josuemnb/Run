@@ -374,7 +374,7 @@ namespace Run.V12 {
                     goto error;
                 }
             }
-            var cls = exp.FindParent<Class>();
+            var cls = id.FindParent<Class>();
             if (cls != null && cls.FindMember<Var>(id.Token.Value) is Var v) {
                 id.From = v;
                 id.Type = v.Type;
@@ -446,6 +446,8 @@ namespace Run.V12 {
             StringBuilder buff = new StringBuilder(call.Token.Value);
             if (call.Parent != null && call.Parent.Parent is New) {
                 buff.Append("_this");
+            } else if (call.Parent is MemberAccess dot && dot.Type != null) {
+                buff.Insert(0, '_').Insert(0, dot.Type.Token.Value);
             }
             foreach (ValueType param in call.Values) {
                 if (param is Null n) {
@@ -513,14 +515,14 @@ namespace Run.V12 {
         }
 
         Function FindFunction(Caller call) {
-            var real = GetRealName(call, call.FindParent<Expression>());
-            if (GetFunction(real) is Function f) {
-                return f;
-            }
             if (call.Parent is MemberAccess dot && dot.Type != null) {
                 foreach (var func in FindClosestFunction(dot.Type, call.Token.Value, call.Values.Count)) {
                     if (ValidateCall(call, func)) return func;
                 }
+            }
+            var real = GetRealName(call, null);
+            if (GetFunction(real) is Function f) {
+                return f;
             }
             if (call.FindParent<Class>() is Class cls) {
                 foreach (var func in FindClosestFunction(cls, call.Token.Value, call.Values.Count)) {
