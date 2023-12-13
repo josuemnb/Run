@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 
-namespace Run.V12 {
+namespace Run {
     public class Namespace : AST {
         public override void Parse() {
             GetName(out Token);

@@ -1,6 +1,7 @@
-﻿using System.IO;
+﻿using System.Diagnostics;
+using System.IO;
 
-namespace Run.V12 {
+namespace Run {
 
     public class Label : AST {
         public override void Parse() {
@@ -52,17 +53,19 @@ namespace Run.V12 {
     }
 
     public class If : Block {
-        public Expression Condition;
+        public ExpressionV2 Condition;
 
         public override void Parse() {
-            Condition = new Expression();
+            Condition = new ExpressionV2();
             Condition.SetParent(this);
             Condition.Parse();
-            if (Scanner.Expect("=>")) {
+            //if (Scanner.Expect("=>")) {
+            if (Scanner.Current.Type == TokenType.ARROW) {
                 ParseBlock(true);
                 return;
             }
-            if (Scanner.Expect('{') == false) {
+            //if (Scanner.Expect('{') == false) {
+            if (Scanner.Current.Type != TokenType.OPEN_BLOCK) {
                 Program.AddError(Scanner.Current, Error.ExpectingBeginOfBlock);
                 return;
             }
@@ -95,11 +98,12 @@ namespace Run.V12 {
     }
     public class For : Block {
         public AST Start;
-        public Expression Condition;
-        public Expression Step;
+        public ExpressionV2 Condition;
+        public ExpressionV2 Step;
         int Stage = -1;
 
         public override void Parse() {
+            if (Scanner.Current.Line == 13) ;
         again:
             if (Scanner.Expect("=>")) {
                 goto once;
@@ -120,19 +124,20 @@ namespace Run.V12 {
                         Scanner.Scan();
                         current = Start = new Var();
                     } else {
-                        current = Start = new Expression();
+                        current = Start = new ExpressionV2();
                     }
                     break;
                 case 1:
-                    current = Condition = new Expression();
+                    current = Condition = new ExpressionV2();
                     break;
                 case 2:
-                    current = Step = new Expression();
+                    current = Step = new ExpressionV2();
                     break;
             }
             current?.SetParent(this);
             current?.Parse();
-            if (current is Expression exp && exp.HasError) {
+            Scanner.RollBack();
+            if (current is ExpressionV2 exp && exp.HasError) {
                 return;
             }
             if (Stage < 2) {
@@ -157,7 +162,7 @@ namespace Run.V12 {
                 case -1:
                     writer.Write("while(1");
                     break;
-                case 0 when Start is Expression condition:
+                case 0 when Start is ExpressionV2 condition:
                     writer.Write("while(");
                     condition.Save(writer, builder);
                     break;
@@ -198,15 +203,18 @@ namespace Run.V12 {
         }
     }
 
-    public class Delete : Block {
+    public class Delete : ValueType {
+        public Block Block;
         public override void Parse() {
+            Block = new Block();
+            Block.SetParent(this);
             bool parenteses = Scanner.Expect('(');
         again:
             if (GetName(out Token name) == false) {
                 Scanner.SkipLine();
                 return;
             }
-            Add<Identifier>().Token = name;
+            Block.Add<Identifier>().Token = name;
             if (Scanner.Expect(',')) {
                 goto again;
             }
@@ -220,8 +228,8 @@ namespace Run.V12 {
         }
 
         public override void Save(TextWriter writer, Builder builder) {
-            for (int i = 0; i < Children.Count; i++) {
-                var child = Children[i];
+            for (int i = 0; i < Block.Children.Count; i++) {
+                var child = Block.Children[i];
                 if (child is Identifier id && id.Type is Class cls && cls.Dispose != null) {
                     writer.Write(cls.Dispose.Real);
                     writer.Write("(");
@@ -231,7 +239,7 @@ namespace Run.V12 {
                 writer.Write("DELETE(");
                 child.Save(writer, builder);
                 writer.Write(")");
-                if (i < Children.Count - 1) {
+                if (i < Block.Children.Count - 1) {
                     writer.WriteLine(';');
                 }
             }

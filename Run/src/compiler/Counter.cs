@@ -1,4 +1,4 @@
-﻿namespace Run.V12 {
+﻿namespace Run {
     public class Counter {
         Builder Builder;
         public Counter(Builder builder) {
@@ -23,7 +23,8 @@
                 case Caller cl: Count(cl); break;
                 case New n: Count(n); break;
                 case Return r: Count(r); break;
-                case Expression e: Count(e); break;
+                case ExpressionV2 e: Count(e); break;
+                //case ExpressionV2 e2: Count(e2); break;
                 case Binary b: Count(b); break;
                 case Unary u: Count(u); break;
                 case Ternary t: Count(t); break;
@@ -114,10 +115,14 @@
             Count(f as Block);
         }
 
-        void Count(Expression e) {
+        void Count(ExpressionV2 e) {
             if (e == null) return;
             Count(e.Result);
         }
+        //void Count(ExpressionV2 e) {
+        //    if (e == null) return;
+        //    Count(e.Result);
+        //}
 
         void Count(Var v) {
             if (v == null || v.Usage > 0) return;
@@ -125,7 +130,7 @@
             if (v.Type is Class c) {
                 Count(c);
             }
-            if (v.Initializer is Expression e) {
+            if (v.Initializer is ExpressionV2 e) {
                 Count(e);
             }
         }

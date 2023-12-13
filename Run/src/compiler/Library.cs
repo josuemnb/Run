@@ -1,4 +1,4 @@
-﻿namespace Run.V12 {
+﻿namespace Run {
     public class Library : AST {
         public override void Parse() {
             if (Scanner.Test().Type != TokenType.QUOTE) {

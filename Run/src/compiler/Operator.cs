@@ -1,6 +1,6 @@
 ﻿using System.IO;
 
-namespace Run.V12 {
+namespace Run {
     public class Operator : Function {
         public override void Parse() {
             SetAccess();

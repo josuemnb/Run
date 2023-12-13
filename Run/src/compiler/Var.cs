@@ -1,14 +1,14 @@
 ﻿using System.Collections.Generic;
 using System.IO;
 
-namespace Run.V12 {
+namespace Run {
     public class Global : Var { }
     public class Field : Var {
     }
     public class Var : ValueType {
-        public List<Expression> Arrays;
+        public List<ExpressionV2> Arrays;
         bool Caller = false;
-        public Expression Initializer;
+        public ExpressionV2 Initializer;
         public int Usage = 0;
 
         public override void Parse() {
@@ -23,14 +23,16 @@ namespace Run.V12 {
             }
             if (Scanner.Expect('=')) {
                 ParseInitializer();
-            }
-            if (Scanner.IsEOL() == false && Scanner.Peek() != ';') {
+                if (Scanner.Current.Type != TokenType.EOL && Scanner.Current.Type != TokenType.SEMICOLON) {
+                    Program.AddError(Scanner.Current, Error.ExpectingEndOfLine);
+                }
+            } else if (Scanner.IsEOL() == false && Scanner.Expect(';') == false) {
                 Program.AddError(Scanner.Current, Error.ExpectingEndOfLine);
             }
         }
 
         public void ParseInitializer() {
-            Initializer = new Expression();
+            Initializer = new();
             Initializer.SetParent(this);
             Initializer.Parse();
         }
@@ -69,7 +71,7 @@ namespace Run.V12 {
                 return;
             }
         again:
-            var exp = new Expression();
+            var exp = new ExpressionV2();
             exp.SetParent(this);
             exp.Parse();
             Arrays.Add(exp);

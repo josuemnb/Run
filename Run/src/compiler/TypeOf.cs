@@ -1,15 +1,15 @@
 ﻿using System.IO;
 
-namespace Run.V12 {
+namespace Run {
     public class TypeOf : ValueType {
-        public Expression Expression;
+        public ExpressionV2 Expression;
 
         public override void Parse() {
             if (Scanner.Expect('(') == false) {
                 Program.AddError(Scanner.Current, Error.ExpectingOpenParenteses);
                 return;
             }
-            Expression = new Expression();
+            Expression = new ExpressionV2();
             Expression.SetParent(this);
             Expression.Parse();
             if (Scanner.Expect(')') == false) {

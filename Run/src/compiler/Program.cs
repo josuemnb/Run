@@ -1,10 +1,8 @@
 ﻿using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 
-namespace Run.V12 {
+namespace Run {
 
     public class Program : Module {
         public List<Error> Errors = new List<Error>();
@@ -108,7 +106,7 @@ namespace Run.V12 {
             if (tok == null) return;
             if (Errors.Count > 0) {
                 var last = Errors[Errors.Count - 1];
-                if (force == false && last.Token.Scanner == tok.Scanner && last.Token.Line == tok.Line) return;
+                if (force == false && last.Token != null && last.Token.Scanner == tok.Scanner && last.Token.Line == tok.Line) return;
             }
             GetStartEnd(tok, out int start, out int end);
             HasErrors = true;

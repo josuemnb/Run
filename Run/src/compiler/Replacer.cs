@@ -1,6 +1,6 @@
 ﻿using System.Collections.Generic;
 
-namespace Run.V12 {
+namespace Run {
     public class Replacer {
         public Builder Builder;
         public Replacer(Builder builder) {
@@ -24,7 +24,7 @@ namespace Run.V12 {
                 case Property property: return Replace(property);
                 case Var var: return Replace(var);
                 case Block block: return Replace(block);
-                case Expression expr: expr.Result = Replace(expr.Result); return expr;
+                case ExpressionV2 expr: expr.Result = Replace(expr.Result); return expr;
                 case Caller call: return Replace(call);
                 case Ternary ter: return Replace(ter);
                 case Parenteses p: return Replace(p);

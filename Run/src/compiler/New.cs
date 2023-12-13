@@ -1,12 +1,12 @@
 ﻿using System.Collections.Generic;
 using System.IO;
 
-namespace Run.V12 {
+namespace Run {
     public class New : ValueType {
-        public Expression Expression;
+        public ExpressionV2 Expression;
         //public DeclaredType Declared;
         public override void Parse() {
-            Expression = new Expression();
+            Expression = new ExpressionV2();
             Expression.SetParent(this);
             Expression.Parse();
             //Declared = new DeclaredType();

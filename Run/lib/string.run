@@ -11,7 +11,7 @@ type string {
 	property size:i32 {
 		get {
 			var	m_size = 0
-			for ;this[m_size]!=0;m_size++ { }
+			for ;this[m_size];m_size++ { }
 			return m_size
 		}
 	}

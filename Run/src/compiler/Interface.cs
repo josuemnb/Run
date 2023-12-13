@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace Run.V12 {
+namespace Run {
     public class Interface : Class {
 
         public override void Parse() {

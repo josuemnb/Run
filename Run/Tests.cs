@@ -90,7 +90,7 @@ namespace Run {
         }
 
         public void TestCode(string code) {
-            var program = new V12.Program(new MemoryStream(Encoding.UTF8.GetBytes(code)));
+            var program = new Program(new MemoryStream(Encoding.UTF8.GetBytes(code)));
             program.Parse();
             program.Build();
             program.Validate();

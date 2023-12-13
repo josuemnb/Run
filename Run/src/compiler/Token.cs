@@ -1,4 +1,4 @@
-﻿namespace Run.V12 {
+﻿namespace Run {
     public class Token {
         public static readonly Token Empty = new Token() { Value = string.Empty };
         internal string Value;

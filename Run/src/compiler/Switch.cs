@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 
-namespace Run.V12 {
+namespace Run {
 
     public class Default : Block {
         public Class Type;
@@ -15,7 +15,7 @@ namespace Run.V12 {
                     Add<Return>().Parse();
                     return;
                 }
-                Add<Expression>().Parse();
+                Add<ExpressionV2>().Parse();
                 return;
             }
             if (Scanner.Expect('{') == false) {
@@ -37,7 +37,7 @@ namespace Run.V12 {
         }
     }
     public class Case : Default {
-        internal List<Expression> Expressions = new List<Expression>(0);
+        internal List<ExpressionV2> Expressions = new List<ExpressionV2>(0);
         public int Count = 0;
         public override void Parse() {
             Token = Scanner.Test();
@@ -48,9 +48,9 @@ namespace Run.V12 {
                 }
             }
         again:
-            var exp = new Expression();
+            var exp = new ExpressionV2();
             exp.SetParent(this);
-            exp.Parse(true);
+            exp.Parse();
             Expressions.Add(exp);
             if (Scanner.Expect(',')) {
                 goto again;
@@ -92,11 +92,11 @@ namespace Run.V12 {
     }
 
     public class Switch : Block {
-        internal Expression Expression;
+        internal ExpressionV2 Expression;
         public Class Type;
         public bool SameType = true;
         public override void Parse() {
-            Expression = new Expression();
+            Expression = new ExpressionV2();
             Expression.SetParent(this);
             Expression.Parse();
             if (Expression.Result == null) {

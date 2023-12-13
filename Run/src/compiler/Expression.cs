@@ -1,18 +1,17 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
 
-namespace Run.V12 {
+namespace Run {
     public class ValueType : AST {
         public Class Type;
         public bool IsNull;
     }
-    public class Expression : ValueType {
+    public class Expression_ : ValueType {
         public AST Result;
-        static Expression Current;
+        static Expression_ Current;
         public bool HasError { get; private set; }
-        public Expression() { }
+        public Expression_() { }
         internal enum PrecedenceLevel {
             Assignment,
             Ternary,
@@ -413,7 +412,7 @@ namespace Run.V12 {
             }
             switch (ast) {
                 case New n:
-                    //n.Expression.Replace(initial, other);
+                    //n.Expression_.Replace(initial, other);
                     break;
                 case Parenteses p:
                     Replace(p.Expression, initial, other);
@@ -436,6 +435,9 @@ namespace Run.V12 {
             writer.Write("this");
         }
     }
+    public class Indexer : Binary {
+
+    }
     public class Literal : ValueType {
         public override string ToString() {
             return base.ToString() + " " + Token.Value;
@@ -443,7 +445,7 @@ namespace Run.V12 {
     }
     public class Ternary : ValueType {
         public AST Condition;
-        public Expression IsTrue, IsFalse;
+        public ExpressionV2 IsTrue, IsFalse;
 
         public Ternary(AST condition) {
             Condition = condition;
@@ -451,14 +453,14 @@ namespace Run.V12 {
 
         public override void Parse() {
             Condition.SetParent(this);
-            IsTrue = new Expression();
+            IsTrue = new ExpressionV2();
             IsTrue.SetParent(this);
             IsTrue.Parse();
-            if (Scanner.Expect(':') == false) {
+            if (Scanner.Current.Type != TokenType.DECLARE) {
                 Program.AddError(Error.ExpectingAssign, this);
                 return;
             }
-            IsFalse = new Expression();
+            IsFalse = new ExpressionV2();
             IsFalse.SetParent(this);
             IsFalse.Parse();
         }
@@ -620,7 +622,7 @@ namespace Run.V12 {
 
         public override void Parse() {
             Values = new(1);
-            var exp = new Expression();
+            var exp = new ExpressionV2();
             exp.SetParent(this);
             Scanner.Scan();
             exp.Parse();
@@ -785,10 +787,10 @@ namespace Run.V12 {
         }
     }
     public class Ref : ValueType {
-        public Expression Expression;
+        public ExpressionV2 Expression;
         public override void Parse() {
             var parenteses = Scanner.Expect('(');
-            Expression = new Expression();
+            Expression = new ExpressionV2();
             Expression.SetParent(this);
             Expression.Parse();
             if (parenteses && Scanner.Expect(')') == false) {
@@ -811,10 +813,10 @@ namespace Run.V12 {
     }
     public class SizeOf : ValueType {
         //public Class Of;
-        public Expression Expression;
+        public ExpressionV2 Expression;
         public override void Parse() {
             var parenteses = Scanner.Expect('(');
-            Expression = new Expression();
+            Expression = new ExpressionV2();
             Expression.SetParent(this);
             Expression.Parse();
             if (parenteses && Scanner.Expect(')') == false) {
@@ -847,7 +849,7 @@ namespace Run.V12 {
     public class Condition : ValueType { }
     public class Step : ValueType { }
     public class Cast : ValueType {
-        public Expression Expression;
+        public ExpressionV2 Expression;
         public int Arrays { get; private set; }
         public override void Parse() {
             if (Scanner.Expect('(') == false) {
@@ -872,7 +874,7 @@ namespace Run.V12 {
                 Scanner.SkipLine();
                 return;
             }
-            Expression = new Expression();
+            Expression = new ExpressionV2();
             Expression.SetParent(this);
             Expression.Parse();
             if (Scanner.Expect(')') == false) {

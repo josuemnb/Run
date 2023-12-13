@@ -1,12 +1,12 @@
 ﻿using System.IO;
 
-namespace Run.V12 {
+namespace Run {
     public class Return : AST {
-        public Expression Expression;
+        public ExpressionV2 Expression;
 
         public override void Parse() {
             if (Scanner.IsEOL()) return;
-            Expression = new Expression();
+            Expression = new ExpressionV2();
             Expression.SetParent(this);
             Expression.Parse();
         }

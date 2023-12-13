@@ -1,4 +1,4 @@
-﻿namespace Run.V12 {
+﻿namespace Run {
     public class Error : AST {
         public string Message;
         public string Code;
@@ -34,7 +34,7 @@
         public static readonly string IncompatibleAccessClassStatic = "Invalid Access Definition. Parent Class is Static";
         public static readonly string BadFormatted = "Bad Formatted";
         public static readonly string InvalidExpression = "Invalid Expression";
-        public static readonly string DoubleArrayNotSupported = "Double Array Expression Not Supported";
+        public static readonly string DoubleArrayNotSupported = "Double Array ExpressionV2 Not Supported";
         public static readonly string IncompatibleType = "Incompatible Types";
         public static readonly string NameAlreadyExists = "Name already exists";
         public static readonly string VariadicParameterAlreadyDefined = "No more parameters after variadic parameter definition";

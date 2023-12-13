@@ -4,7 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
-namespace Run.V12 {
+namespace Run {
     public class Validator {
         public Builder Builder;
         public Validator(Builder builder) {
@@ -47,40 +47,54 @@ namespace Run.V12 {
                 return;
             }
             block.Validated = true;
-            switch (block) {
-                case Delete d:
-                    Validate(d);
-                    return;
-            }
+            //switch (block) {
+            //    case Delete d:
+            //        Validate(d);
+            //        return;
+            //}
             for (int i = 0; i < block.Children.Count; i++) {
                 var item = block.Children[i];
-                switch (item) {
-                    case Goto gt: Validate(gt); break;
-                    case Label lbl: Validate(lbl); break;
-                    case Property property: Validate(property); break;
-                    case Switch sw: Validate(sw); break;
-                    case Base b: Validate(b); break;
-                    case Enum @enum: Validate(@enum); break;
-                    case Var v: Validate(v); break;
-                    case Else el: Validate(el); break;
-                    case If If: Validate(If); break;
-                    case For f: Validate(f); break;
-                    case Class cls: Validate(cls); break;
-                    case Expression exp: Validate(exp); break;
-                    case Delete del: Validate(del); break;
-                    case Block b: Validate(b); break;
-                    case Return ret: Validate(ret); break;
-                    case TypeOf tp: Validate(tp); break;
-                    default: break;
-                }
+                Validate(item);
             }
-            if (block is Function func && func.IsArrow && func.Children.Count > 0) {
-                Expression e = func.Children.Find(c => c is Expression) as Expression;
-                Validate(func.Type);
-                if (func.Type != null && AreCompatible(e.Type, func.Type) == false) {
-                    Builder.Program.AddError(func.Token, Error.IncompatibleType);
-                }
+            //if (block is Function func && func.IsArrow && func.Children.Count > 0) {
+            //    ExpressionV2 e = func.Children.Find(c => c is ExpressionV2) as ExpressionV2;
+            //    Validate(func.Type);
+            //    if (func.Type != null && AreCompatible(e.Type, func.Type) == false) {
+            //        Builder.Program.AddError(func.Token, Error.IncompatibleType);
+            //    }
+            //}
+        }
+
+        void Validate(AST ast) {
+            switch (ast) {
+                case Function f: Validate(f); break;
+                case Goto gt: Validate(gt); break;
+                case Label lbl: Validate(lbl); break;
+                case Property property: Validate(property); break;
+                case Switch sw: Validate(sw); break;
+                case Base b: Validate(b); break;
+                case Enum @enum: Validate(@enum); break;
+                case Var v: Validate(v); break;
+                case Else el: Validate(el); break;
+                case If If: Validate(If); break;
+                case For f: Validate(f); break;
+                case Class cls: Validate(cls); break;
+                case ExpressionV2 exp: Validate(exp); break;
+                case Delete del: Validate(del); break;
+                case Block b: Validate(b); break;
+                case Return ret: Validate(ret); break;
+                case TypeOf tp: Validate(tp); break;
+                default: break;
             }
+        }
+
+        void Validate(Function func) {
+            if (func.Validated) {
+                return;
+            }
+            func.Validated = true;
+            Validate(func as Block);
+            Validate(func.Type);
         }
 
         void Validate(Label label) {
@@ -211,7 +225,7 @@ namespace Run.V12 {
 
         void Validate(For f) {
             switch (f.Start) {
-                case Expression exp: Validate(exp); break;
+                case ExpressionV2 exp: Validate(exp); break;
                 case Var v: Validate(v); break;
             }
             if (f.Condition != null) Validate(f.Condition);
@@ -229,7 +243,7 @@ namespace Run.V12 {
             Validate(If as Block);
         }
         void Validate(Delete delete) {
-            foreach (var item in delete.Children) {
+            foreach (var item in delete.Block.Children) {
                 if (item.Token.Value == "this") {
                     if (item.Parent.FindParent<Class>() == null) {
                         Builder.Program.AddError(item.Token, Error.UnknownName);
@@ -319,12 +333,17 @@ namespace Run.V12 {
             //if (var.HasGenerics == false)
             Builder.Program.AddError(var.Type.Token, Error.UnknownType);
         }
-        public void Validate(Expression exp) {
+        public void Validate(ExpressionV2 exp) {
             Validate(exp.Result, exp);
             exp.Type = (exp.Result as ValueType)?.Type;
             Validate(exp.Type);
         }
-        void Validate(Literal literal, Expression exp) {
+        //public void Validate(ExpressionV2 exp) {
+        //    Validate(exp.Result, null);
+        //    exp.Type = (exp.Result as ValueType)?.Type;
+        //    Validate(exp.Type);
+        //}
+        void Validate(Literal literal, ExpressionV2 exp) {
             switch (literal.Token.Type) {
                 case TokenType.REAL:
                     literal.Type = Builder.F64;
@@ -347,7 +366,7 @@ namespace Run.V12 {
             }
             Validate(literal.Type);
         }
-        void Validate(Identifier id, Expression exp) {
+        void Validate(Identifier id, ExpressionV2 exp) {
             if (id.Type != null && id.Type.IsTemporary == false) return;
             if (id.Parent is MemberAccess acess && acess.Type != null) {
                 if (acess.Type.IsTemporary && Builder.Classes.TryGetValue(acess.Type.Token.Value, out Class c)) {
@@ -396,7 +415,7 @@ namespace Run.V12 {
         error:
             Builder.Program.AddError(Error.UnknownName, id);
         }
-        void Validate(MemberAccess dot, Expression exp) {
+        void Validate(MemberAccess dot, ExpressionV2 exp) {
             dot.Type = (dot.Parent as ValueType)?.Type;
             Validate(dot.Type);
             Validate(dot.This, exp);
@@ -411,7 +430,8 @@ namespace Run.V12 {
             if (dot.Type == null)
                 dot.Program.AddError(dot.Member.Token, Error.UnknownClassMember);
         }
-        void Validate(Array array, Expression exp) {
+
+        void Validate(ArrayV2 array, ExpressionV2 exp) {
             if (array.Token.Value == "this") {
                 if (exp.FindParent<Class>() is Class cls) {
                     array.Type = cls;
@@ -442,7 +462,60 @@ namespace Run.V12 {
             ValidateParameters(array, exp);
         }
 
-        string GetRealName(Caller call, Expression exp) {
+        void Validate(Array array, ExpressionV2 exp) {
+            if (array.Token.Value == "this") {
+                if (exp.FindParent<Class>() is Class cls) {
+                    array.Type = cls;
+                } else {
+                    Builder.Program.AddError(Error.UnknownType, array);
+                    return;
+                }
+            } else if (exp.FindName(array.Token.Value) is ValueType vt) {
+                array.Type = vt.Type;
+                array.From = vt;
+            } else if (Builder.Classes.TryGetValue(array.Token.Value, out Class cls)) {
+                array.Type = cls;
+            } else if (array.FindName(array.Token.Value) is ValueType vt1) {
+                array.Type = vt1.Type;
+                array.From = vt1;
+            } else {
+                Builder.Program.AddError(Error.UnknownType, array);
+                return;
+            }
+            if (array.Type == null) {
+                Builder.Program.AddError(Error.UnknownType, array);
+                return;
+            }
+            if (array.Type.ArrayOf != null) {
+                array.Type = array.Type.ArrayOf.Type;
+            }
+            Validate(array.Type);
+            ValidateParameters(array, exp);
+        }
+
+        string GetRealName(CallerV2 call, ExpressionV2 exp) {
+            StringBuilder buff = new StringBuilder(call.Token.Value);
+            if (call.Parent != null && call.Parent.Parent is New) {
+                buff.Append("_this");
+            } else if (call.Parent is MemberAccess dot && dot.Type != null) {
+                buff.Insert(0, '_').Insert(0, dot.Type.Token.Value);
+            }
+            foreach (ValueType param in call.Values) {
+                if (param is Null n) {
+                    param.Type = Builder.Pointer;
+                } else if (param.Type == null) {
+                    Validate(param, exp);
+                }
+                if (param.Type == null) {
+                    param.Program.AddError(param.Token, Error.UnknownType);
+                    return null;
+                }
+                buff.Append('_').Append(param.Type.Token.Value);
+            }
+            return buff.ToString();
+        }
+
+        string GetRealName(Caller call, ExpressionV2 exp) {
             StringBuilder buff = new StringBuilder(call.Token.Value);
             if (call.Parent != null && call.Parent.Parent is New) {
                 buff.Append("_this");
@@ -500,6 +573,20 @@ namespace Run.V12 {
             }
         }
 
+        bool ValidateCall(CallerV2 call, Function func) {
+            if (call.Values.Count > 0) {
+                for (int i = 0; i < call.Values.Count; i++) {
+                    var value = call.Values[i] as ValueType;
+                    var param = func.Parameters.Children[i] as Parameter;
+                    if (value.Type == null) return false;
+                    if (value.Type.IsCompatible(param.Type) == false) {
+                        return false;
+                    }
+                }
+            }
+            return true;
+        }
+
         bool ValidateCall(Caller call, Function func) {
             if (call.Values.Count > 0) {
                 for (int i = 0; i < call.Values.Count; i++) {
@@ -512,6 +599,36 @@ namespace Run.V12 {
                 }
             }
             return true;
+        }
+
+        Function FindFunction(CallerV2 call) {
+            if (call.Parent is MemberAccess dot && dot.Type != null) {
+                foreach (var func in FindClosestFunction(dot.Type, call.Token.Value, call.Values.Count)) {
+                    if (ValidateCall(call, func)) return func;
+                }
+            }
+            var real = GetRealName(call, null);
+            if (GetFunction(real) is Function f) {
+                return f;
+            }
+            if (call.FindParent<Class>() is Class cls) {
+                foreach (var func in FindClosestFunction(cls, call.Token.Value, call.Values.Count)) {
+                    if (ValidateCall(call, func)) return func;
+                }
+            }
+            if (call.FindParent<New>() is New) {
+                if (Builder.Classes.TryGetValue(call.Token.Value, out Class newCls)) {
+                    foreach (var func in FindClosestFunction(newCls, call.Token.Value, call.Values.Count)) {
+                        if (ValidateCall(call, func)) return func;
+                    }
+                }
+            }
+            if (call.FindParent<Module>() is Module module) {
+                foreach (var func in FindClosestFunction(module, call.Token.Value, call.Values.Count)) {
+                    if (ValidateCall(call, func)) return func;
+                }
+            }
+            return null;
         }
 
         Function FindFunction(Caller call) {
@@ -543,8 +660,38 @@ namespace Run.V12 {
             }
             return null;
         }
+        void Validate(CallerV2 call, ExpressionV2 exp, bool addError = true) {
+            AST found = FindFunction(call);
+            switch (found) {
+                case Function f:
+                    call.Type = f.Type;
+                    call.Real = f.Real;
+                    call.Function = f;
+                    break;
+                case Var v:
+                    call.Type = v.Type;
+                    call.Real = v.Type.Token.Value;
+                    break;
+                case Class cls:
+                    call.Type = cls;
+                    if (cls.IsNative) {
+                        call.Real = cls.Real;
+                    } else {
+                        call.Real = cls.Token.Value;
+                    }
+                    break;
+                default:
+                    if (addError) {
+                        Builder.Program.AddError(call.Token, Error.UnknownFunctionNameOrWrongParamaters);
+                    }
+                    return;
+            }
+            Validate(call.Type);
+            ValidateParameters(call, exp);
+        }
 
-        void Validate(Caller call, Expression exp, bool addError = true) {
+
+        void Validate(Caller call, ExpressionV2 exp, bool addError = true) {
             AST found = FindFunction(call);
             switch (found) {
                 case Function f:
@@ -592,14 +739,20 @@ namespace Run.V12 {
             }
             return null;
         }
-        void ValidateParameters(Caller caller, Expression exp) {
+        void ValidateParameters(Caller caller, ExpressionV2 exp) {
+            if (caller.Values == null || caller.Values.Count == 0) return;
+            for (int i = 0; i < caller.Values.Count; i++) {
+                Validate(caller.Values[i], exp);
+            }
+        }
+        void ValidateParameters(CallerV2 caller, ExpressionV2 exp) {
             if (caller.Values == null || caller.Values.Count == 0) return;
             for (int i = 0; i < caller.Values.Count; i++) {
                 Validate(caller.Values[i], exp);
             }
         }
 
-        void Validate(Scope scope, Expression exp) {
+        void Validate(Scope scope, ExpressionV2 exp) {
             if (Builder.Classes.TryGetValue(scope.Token.Value, out Class cls) == false) {
                 Builder.Program.AddError(scope.Token, Error.UnknownType);
                 return;
@@ -619,19 +772,19 @@ namespace Run.V12 {
             Validate(cls);
         }
 
-        void Validate(SizeOf sizeOf, Expression exp) {
+        void Validate(SizeOf sizeOf, ExpressionV2 exp) {
             Validate(sizeOf.Expression);
             sizeOf.Type = Builder.I32;
             Validate(sizeOf.Type);
         }
 
-        void Validate(Ref r, Expression exp) {
+        void Validate(Ref r, ExpressionV2 exp) {
             Validate(r.Expression.Result, exp);
             r.Expression.Type = (r.Expression.Result as ValueType).Type;
             r.Type = Builder.Pointer;
         }
 
-        void Validate(New n, Expression exp) {
+        void Validate(New n, ExpressionV2 exp) {
             if (n.Expression.Result is Caller call && call is not Array) {
                 //Validate(call, exp, false);
                 //if (call.Type == null) {
@@ -644,13 +797,15 @@ namespace Run.V12 {
             Validate(n.Expression);
             n.Type = (n.Expression)?.Type;
         }
-        void Validate(AST ast, Expression exp) {
+        void Validate(AST ast, ExpressionV2 exp) {
             if (ast is ValueType vt && vt.Type != null) return;
             switch (ast) {
                 case Delete del: Validate(del, exp); break;
                 case Identifier id: Validate(id, exp); break;
                 case Literal lit: Validate(lit, exp); break;
+                case ArrayV2 arrayV2: Validate(arrayV2, exp); break;
                 case Array array: Validate(array, exp); break;
+                case CallerV2 callV2: Validate(callV2, exp); break;
                 case Caller call: Validate(call, exp); break;
                 case Ternary ter: Validate(ter, exp); break;
                 case Parenteses p: Validate(p, exp); break;
@@ -675,7 +830,7 @@ namespace Run.V12 {
             }
         }
 
-        void Validate(DeclaredType declared, Expression exp) {
+        void Validate(DeclaredType declared, ExpressionV2 exp) {
             if (Builder.Classes.TryGetValue(declared.Token.Value, out Class cls) == false) {
                 if (Builder.Enums.TryGetValue(declared.Token.Value, out Enum e) == false) {
                     Builder.Program.AddError(declared.Token, Error.UnknownType);
@@ -689,7 +844,7 @@ namespace Run.V12 {
             }
         }
 
-        void Validate(TypeOf type, Expression exp) {
+        void Validate(TypeOf type, ExpressionV2 exp) {
             if (type.Expression.Result is Identifier id) {
                 if (Builder.Classes.TryGetValue(id.Token.Value, out Class cls)) {
                     Validate(cls);
@@ -702,7 +857,7 @@ namespace Run.V12 {
             type.Type = Builder.Classes["ReflectionType"];
         }
 
-        void Validate(As a, Expression exp) {
+        void Validate(As a, ExpressionV2 exp) {
             Validate(a.Left, exp);
             Validate(a.Declared, exp);
             a.Type = a.Declared.Type;
@@ -736,18 +891,18 @@ namespace Run.V12 {
             //}
         }
 
-        void Validate(Delete del, Expression exp) {
-            for (int i = 0; i < del.Children.Count; i++) {
-                Validate(del.Children[i], exp);
+        void Validate(Delete del, ExpressionV2 exp) {
+            for (int i = 0; i < del.Block.Children.Count; i++) {
+                Validate(del.Block.Children[i], exp);
             }
         }
 
-        void Validate(Comparation comp, Expression exp) {
+        void Validate(Comparation comp, ExpressionV2 exp) {
             Validate(comp as Binary, exp);
             comp.Type = Builder.Bool;
         }
 
-        void Validate(Ternary ternary, Expression exp) {
+        void Validate(Ternary ternary, ExpressionV2 exp) {
             Validate(ternary.Condition, exp);
             switch (ternary.Condition) {
                 case Comparation: break;
@@ -772,7 +927,7 @@ namespace Run.V12 {
             ternary.Type = ternary.IsTrue.Type;
         }
 
-        void Validate(Unary unary, Expression exp) {
+        void Validate(Unary unary, ExpressionV2 exp) {
             if (unary.Right != null) {
                 Validate(unary.Right, exp);
             }
@@ -783,17 +938,17 @@ namespace Run.V12 {
             Builder.Program.AddError(Error.InvalidExpression, unary.Right);
         }
 
-        void Validate(This t, Expression exp) {
+        void Validate(This t, ExpressionV2 exp) {
             if (t.Type == null) {
 
             }
         }
 
-        void Validate(Parenteses p, Expression exp) {
+        void Validate(Parenteses p, ExpressionV2 exp) {
             Validate(p.Expression, exp);
             p.Type = (p.Expression as ValueType)?.Type;
         }
-        void Validate(Cast cast, Expression exp) {
+        void Validate(Cast cast, ExpressionV2 exp) {
             if (Builder.Classes.TryGetValue(cast.Token.Value, out Class cls) == false) {
                 Builder.Program.AddError(cast.Token, Error.UndefinedType);
                 return;
@@ -801,7 +956,7 @@ namespace Run.V12 {
             cast.Type = cls;
             Validate(cast.Expression);
         }
-        void Validate(Binary bin, Expression exp) {
+        void Validate(Binary bin, ExpressionV2 exp) {
             var left = bin.Left as ValueType;
             var right = bin.Right as ValueType;
             if (left == null || right == null) {
@@ -810,7 +965,14 @@ namespace Run.V12 {
             }
             Validate(left, exp);
             Validate(right, exp);
-            if (AreCompatible(left is Expression l ? l.Result as ValueType : left, right is Expression r ? r.Result as ValueType : right) == false) {
+            if (bin.Token.Type == TokenType.DOT) {
+                bin.Type = right.Type;
+                return;
+            }
+            if (AreCompatible(left is ExpressionV2 v2 ? v2.Result as ValueType : left, right is ExpressionV2 v2_ ? v2_.Result as ValueType : right) == false) {
+                Builder.Program.AddError(right.Token ?? left.Token, Error.IncompatibleType);
+                return;
+            } else if (AreCompatible(left is ExpressionV2 l ? l.Result as ValueType : left, right is ExpressionV2 r ? r.Result as ValueType : right) == false) {
                 Builder.Program.AddError(right.Token ?? left.Token, Error.IncompatibleType);
                 return;
             }

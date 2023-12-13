@@ -1,8 +1,3 @@
-using allocator
-
 main {
-	Allocator.initialize()
-	var p = Allocator.alloc(1024)
-	print("%d\n",Allocator.getInfo(p).size)
-	Allocator.free(p)
+	var i = 10 + 10
 }

@@ -1,7 +1,7 @@
 ﻿using System;
 using System.IO;
 
-namespace Run.V12 {
+namespace Run {
     public class Scanner : IDisposable {
         internal string Data = null;
         internal int Line = 1;
@@ -36,6 +36,7 @@ namespace Run.V12 {
         }
         internal virtual Token Scan() {
             if (getToken(out Token t)) {
+                if (t.Line == 63) ;
                 return t;
             }
             return null;
@@ -280,7 +281,7 @@ namespace Run.V12 {
         }
 
         internal bool IsEOL() {
-            if (!skip())
+            if (!skip(false))
                 return true;
             if (!Valid || Data[Position] == '\n' || Data[Position] == '\r') {
                 if (Data[Position] == '\r') {

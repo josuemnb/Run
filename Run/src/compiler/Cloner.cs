@@ -1,7 +1,7 @@
 ﻿//using System.Collections.Generic;
 //using System.Text;
 
-//namespace Run.V12 {
+//namespace Run {
 
 //    public class Cloner {
 //        Builder Builder;
@@ -35,7 +35,7 @@
 
 //        T Clone<T>(T ast, List<Generic> originals, List<Generic> generics, AST newParent) where T : AST {
 //            switch (ast) {
-//                case Expression expression: return Clone(expression, originals, generics, newParent) as T;
+//                case ExpressionV2 expression: return Clone(expression, originals, generics, newParent) as T;
 //                case Function function: return Clone(function, originals, generics, newParent) as T;
 //                case For f: return Clone(f, originals, generics, newParent) as T;
 //                case If i: return Clone(i, originals, generics, newParent) as T;
@@ -65,7 +65,7 @@
 
 //        Parenteses Clone(Parenteses parenteses, List<Generic> originals, List<Generic> generics, AST newParent) {
 //            var clone = parenteses.Clone();
-//            clone.Expression = Clone(clone.Expression, originals, generics, newParent);
+//            clone.ExpressionV2 = Clone(clone.ExpressionV2, originals, generics, newParent);
 //            return clone;
 //        }
 
@@ -126,8 +126,8 @@
 
 //        Case Clone(Case cs, List<Generic> originals, List<Generic> generics, AST newParent) {
 //            var clone = cs.Clone();
-//            clone.Expressions = new List<Expression>(cs.Expressions.Count);
-//            foreach (Expression exp in cs.Expressions) {
+//            clone.Expressions = new List<ExpressionV2>(cs.Expressions.Count);
+//            foreach (ExpressionV2 exp in cs.Expressions) {
 //                clone.Expressions.Add(Clone(exp, originals, generics, newParent));
 //            }
 //            return clone;
@@ -152,7 +152,7 @@
 //            }
 //            return block;
 //        }
-//        Expression Clone(Expression expression, List<Generic> originals, List<Generic> generics, AST newParent) {
+//        ExpressionV2 Clone(ExpressionV2 expression, List<Generic> originals, List<Generic> generics, AST newParent) {
 //            var clone = expression.Clone();
 //            clone.Result = Clone(expression.Result, originals, generics, newParent);
 //            return clone;

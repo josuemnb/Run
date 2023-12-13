@@ -1,6 +1,6 @@
 ﻿using System.IO;
 
-namespace Run.V12 {
+namespace Run {
     public class Binary : ValueType {
         public AST Left;
         public AST Right;

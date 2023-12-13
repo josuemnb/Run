@@ -1,7 +1,7 @@
 ﻿using System;
 using System.IO;
 
-namespace Run.V12 {
+namespace Run {
     public class Property : Var {
 
         public enum PropertyKind {
@@ -139,7 +139,7 @@ namespace Run.V12 {
         void FinishGetter(Function func, bool simple) {
             var ret = func.Add<Return>();
             if (simple) {
-                ret.Expression = new Expression();
+                ret.Expression = new ExpressionV2();
                 ret.Expression.SetParent(ret);
                 var id = new Identifier {
                     Virtual = true,
@@ -154,7 +154,7 @@ namespace Run.V12 {
         }
 
         void FinishSetter(Function func, bool simple) {
-            var exp = func.Add<Expression>();
+            var exp = func.Add<ExpressionV2>();
             if (simple) {
                 var bin = new Binary {
                     Type = Type,

@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
-namespace Run.V12 {
+namespace Run {
     public class Builder {
         public Dictionary<string, Class> Classes = new(0);
         public Class Bool;

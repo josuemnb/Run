@@ -1,8 +1,8 @@
 ﻿using System.IO;
 
-namespace Run.V12 {
+namespace Run {
     public class EnumMember : ValueType {
-        public Expression Expression;
+        public ExpressionV2 Expression;
         public override void Save(TextWriter writer, Builder builder) {
             writer.Write(Parent.Token.Value);
             writer.Write('_');
@@ -35,7 +35,7 @@ namespace Run.V12 {
                         };
                         Add(bin);
                         if (Scanner.Expect('=')) {
-                            bin.Expression = new Expression();
+                            bin.Expression = new ExpressionV2();
                             bin.Expression.SetParent(bin);
                             bin.Expression.Parse();
                         }
