@@ -8,6 +8,7 @@
         public static readonly string ExpectedStaticAcess = "Expected Static Access";
         public static readonly string ExpectingArrowOfBeginOfBlock = "Expecting '=>' or '{'";
         public static readonly string ExpectingOpenParenteses = "Expecting (";
+        public static readonly string ExpectingOpenParentesesOrBrackets = "Expecting ( or [";
         public static readonly string ExpectingCommaOrCloseParenteses = "Expecting , or )";
         public static readonly string ExpectingComma = "Expecting ,";
         public static readonly string ExpectingCloseParenteses = "Expecting )";
@@ -15,6 +16,7 @@
         public static readonly string ExpectingEndOfArray = "Expecting End of Array";
         public static readonly string ExpectingEndOfLine = "Expecting End of Line";
         public static readonly string ExpectingName = "Expecting a name";
+        public static readonly string ExpectingNumber = "Expecting a number";
         public static readonly string ExpectingMember = "Expecting a member";
         public static readonly string ExpectingValue = "Expecting a Value";
         public static readonly string ExpectingCase = "Expecting a 'case'";

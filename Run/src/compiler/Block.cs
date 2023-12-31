@@ -30,15 +30,15 @@ namespace Run {
                     case TokenType.AT: ParseAnnotation(); continue;
                     case TokenType.COMMENT: Scanner.SkipLine(); continue;
                     case TokenType.NAME: ParseName(token); break;
-                    case TokenType.INCREMENT:
-                    case TokenType.DECREMENT:
-                    case TokenType.OPEN_PARENTESES:
+                    //case TokenType.INCREMENT:
+                    //case TokenType.DECREMENT:
+                    //case TokenType.OPEN_PARENTESES:
+                    default:
                         Scanner.RollBack();
                         Add<ExpressionV2>().Parse();
                         break;
-                    default:
-                        Program.AddError(token, Error.InvalidExpression);
-                        break;
+                        //Program.AddError(token, Error.InvalidExpression);
+                        //break;
                 }
                 if (once) return;
             }

@@ -45,4 +45,7 @@ namespace Run {
             Left.Save(writer, builder);
         }
     }
+
+    public class Qualifier : Binary {
+    }
 }

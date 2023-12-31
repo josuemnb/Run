@@ -92,8 +92,8 @@ type arrayString: array {
 	func resize() {
 		if size < capacity => return
 		capacity *=2
-		items = realloc(items as pointer, capacity * sizeof(string))
-		hashes = realloc(hashes as pointer, capacity * sizeof(i32))
+		items = realloc(items as pointer, capacity * sizeof(string)) as string[]
+		hashes = realloc(hashes as pointer, capacity * sizeof(i32)) as i32[]
 	}
 
 	func dispose() {

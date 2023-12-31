@@ -38,7 +38,7 @@ namespace Run {
     }
     public class Constructor : Function {
         public override string ToString() {
-            return "This: " + Type;
+            return "Constructor: " + Type;
         }
     }
 

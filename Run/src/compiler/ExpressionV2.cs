@@ -6,7 +6,12 @@ using System.IO;
 namespace Run {
     public class ExpressionV2 : ValueType {
         public AST Result;
+        public bool FromNewKeyword;
         public bool HasError { get; private set; }
+
+        public override string ToString() {
+            return Result?.ToString();
+        }
         public override void Parse() {
             Scanner.Scan();
             Result = EvalExpression(this);
@@ -111,6 +116,7 @@ namespace Run {
                         }
                         parent.Scanner.Scan();
                         ret = new Indexer() { Token = op, Left = ret, Right = right };
+                        ret.SetParent(parent);
                     }
                     break;
             }
@@ -125,8 +131,6 @@ namespace Run {
             var a = new As();
             a.SetParent(parent);
             a.Left = left;
-            //parent.Scanner.Scan();
-            //a.Right = ParseExpression(a, PrecedenceLevel.Assignment);
             a.Declared = new DeclaredType();
             a.Declared.SetParent(a);
             a.Declared.Parse();
@@ -222,6 +226,7 @@ namespace Run {
                 case "new":
                     var n = new New();
                     n.Token = token;
+                    if (token.Line == 58) ;
                     n.SetParent(parent);
                     n.Parse();
                     return n;
@@ -289,6 +294,16 @@ namespace Run {
 
     public class ArrayV2 : CallerV2 {
         public ArrayV2() { End = TokenType.CLOSE_ARRAY; }
+
+        public override void Save(TextWriter writer, Builder builder) {
+            switch (From) {
+                case Var v when v.Parent is Class: writer.Write("this->"); break;
+            }
+            if (Token != null) writer.Write(Token.Value);
+            writer.Write('[');
+            SaveValues(writer, builder, false);
+            writer.Write(']');
+        }
     }
 
     public class CallerV2 : ValueType {
@@ -298,25 +313,136 @@ namespace Run {
         protected TokenType End = TokenType.CLOSE_PARENTESES;
 
         public override void Parse() {
-            while (true) {
-                var p = new ExpressionV2();
-                p.SetParent(this);
-                p.Parse();
-                if (p == null) {
-                    break;
-                }
-                p.Level = Level + 2;
-                Values.Add(p);
-                if (Scanner.Current.Type == End) {
-                    Scanner.Scan();
-                    break;
-                }
-                if (Scanner.Current.Type != TokenType.COMMA) {
-                    Program.AddError(Scanner.Current, Error.ExpectingCommaOrCloseParenteses);
-                    break;
-                }
+            if (Scanner.Test().Type == End) {
                 Scanner.Scan();
+            } else {
+                while (true) {
+                    var p = new ExpressionV2();
+                    p.SetParent(this);
+                    p.Parse();
+                    if (p == null) {
+                        break;
+                    }
+                    p.Level = Level + 2;
+                    Values.Add(p);
+                    if (Scanner.Current.Type == End) {
+                        break;
+                    }
+                    if (Scanner.Current.Type != TokenType.COMMA) {
+                        Program.AddError(Scanner.Current, Error.ExpectingCommaOrCloseParenteses);
+                        break;
+                    }
+                }
             }
+            Scanner.Scan();
+        }
+
+        public override void Print() {
+            From?.Print();
+            base.Print();
+            foreach (var child in Values) {
+                child.Level = Level + 1;
+                child.Print();
+            }
+        }
+
+        public override void Save(TextWriter writer, Builder builder) {
+            if (Function == null) {
+                Program.AddError(Error.UnknownName, this);
+                return;
+            }
+            if (Function.IsNative) {
+                if (Function.Native != null && Function.Native.Count > 0) {
+                    writer.Write(Function.Native[0]);
+                } else {
+                    writer.Write(Token.Value);
+                }
+            } else {
+                writer.Write(Real);
+            }
+            writer.Write('(');
+            bool started = false;
+            if (Function.Access == AccessType.STATIC) {
+            } else if (Parent is MemberAccess access) {
+                // codigo muito estranho
+                if (access.Parent is MemberAccess ma) {
+                    ma.This.Save(writer, builder);
+                    started = true;
+                }
+            } else if (From is Property) {
+                writer.Write("this");
+                started = true;
+            } else if (Function is not Operator && Function.Parent is Class) {
+                writer.Write("this");
+                started = true;
+            }
+            SaveValuesOrReplace(writer, builder, started);
+            writer.Write(')');
+        }
+
+        private void SaveValuesOrReplace(TextWriter writer, Builder builder, bool started) {
+            if (Function.IsNative && Function.Native != null && Function.Native.Count > 1 && Function.Parameters != null && Function.Parameters.Children.Count > 0) {
+                var args = Function.Native[1];
+                Parameter param = null;
+                for (int i = 0; i < Function.Parameters.Children.Count || i < Values.Count; i++) {
+                    if (Function.Parameters.Children.Count > i) {
+                        param = Function.Parameters.Children[i] as Parameter;
+                    }
+                    if (Function.Parameters.Children.Count > i && Values.Count > i) {
+                        if (args.Contains("$" + param.Token.Value)) {
+                            var value = Values[i];
+                            if (value == null) {
+                                args = args.Replace("$" + param.Token.Value, "0");
+                            } else {
+                                var memory = new StringWriter();
+                                value.Save(memory, builder);
+                                args = args.Replace("$" + param.Token.Value, memory.ToString());
+                            }
+                        }
+                    } else if (Function.HasVariadic && param != null) {
+                        if (Function.Parameters.Children.Count > i) {
+                            args = args.Replace("$" + param.Token.Value, "").Trim();
+                            if (args.EndsWith(',')) {
+                                // remove comma at the end
+                                args = args.Substring(0, args.Length - 1);
+                            }
+                            break;
+                        } else if (Values.Count > i) {
+                            var value = Values[i] as ValueType;
+                            if (Validator.AreCompatible(value.Type, param.Type) == false) {
+                                Function.Program.AddError(value.Token, Error.IncompatibleType);
+                                continue;
+                            }
+                            var memory = new StringWriter();
+                            value.Save(memory, builder);
+                            args += (i > 0 ? "," : "") + memory.ToString();
+                        }
+                    }
+                }
+                writer.Write(args);
+            } else {
+                SaveValues(writer, builder, started);
+            }
+        }
+
+        public void SaveValues(TextWriter writer, Builder builder, bool started) {
+            if (Values != null && Values.Count > 0) {
+                if (started) {
+                    writer.Write(", ");
+                }
+                for (int i = 0; i < Values.Count; i++) {
+                    var value = Values[i];
+                    if (value == null) continue;
+                    if (i > 0) {
+                        writer.Write(',');
+                    }
+                    value.Save(writer, builder);
+                }
+            }
+        }
+
+        public override string ToString() {
+            return base.ToString() + " (" + Real + ")";
         }
     }
 }

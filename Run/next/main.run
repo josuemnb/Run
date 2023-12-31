@@ -1,3 +1,9 @@
+type test { 
+	func t:i32 => 0
+	func child:test => new test()
+}
+
 main {
-	var i = 10 + 10
+	var i = new i32[10]
+	var t = new test().child().t()	
 }

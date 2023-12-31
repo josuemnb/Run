@@ -166,7 +166,9 @@ namespace Run {
             return typeOf;
         }
         AST Replace(New @new) {
-            @new.Expression.Result = Replace(@new.Expression.Result);
+            //@new.Expression.Result = Replace(@new.Expression.Result);
+            @new.Caller = (CallerV2)Replace(@new.Caller);
+            //@new.Calling = Replace(@new.Calling);
             return @new;
         }
         AST Replace(Binary bin) {
@@ -175,7 +177,7 @@ namespace Run {
             if (bin.Token == null) {
                 return bin;
             }
-            var cls = (bin.Right as ValueType)?.Type;
+            var cls = (bin.Left as ValueType)?.Type;
             if (cls == null) return bin;
             for (int i = 0; i < cls.Children.Count; i++) {
                 var child = cls.Children[i];
@@ -184,7 +186,7 @@ namespace Run {
                         Builder.Program.AddError(bin.Token, Error.OnlyOneParameterAllowedInOperator);
                         break;
                     }
-                    if (op.Parameters.Children[0] is Parameter p && p.Type != null && Validator.AreCompatible(p, bin.Right as ValueType) == false) {
+                    if (op.Parameters.Children[0] is Parameter p && p.Type != null && Validator.AreCompatible(Builder, p, bin.Right as ValueType) == false) {
                         Builder.Program.AddError(bin.Token, Error.IncompatibleType);
                         break;
                     }

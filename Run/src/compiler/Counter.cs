@@ -35,6 +35,7 @@
                 case SizeOf so: Count(so); break;
                 case Scope scope: Count(scope); break;
                 case Cast cast: Count(cast); break;
+                case CallerV2 cv2: Count(cv2); break;
             }
         }
 
@@ -58,8 +59,17 @@
                 }
             }
         }
+        void Count(CallerV2 c) {
+            Count(c.From);
+            Count(c.Function);
+            if (c.Values != null) {
+                for (int i = 0; i < c.Values.Count; i++) {
+                    Count(c.Values[i]);
+                }
+            }
+        }
 
-        void Count(New n) => Count(n.Expression);
+        void Count(New n) => Count(n.Caller);
 
         void Count(Return r) => Count(r.Expression);
 

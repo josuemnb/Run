@@ -1,6 +1,4 @@
-﻿using System;
-using System.Collections;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
@@ -46,12 +44,12 @@ namespace Run {
             if (block.Validated) {
                 return;
             }
-            block.Validated = true;
             //switch (block) {
             //    case Delete d:
             //        Validate(d);
             //        return;
             //}
+            block.Validated = true;
             for (int i = 0; i < block.Children.Count; i++) {
                 var item = block.Children[i];
                 Validate(item);
@@ -92,9 +90,9 @@ namespace Run {
             if (func.Validated) {
                 return;
             }
-            func.Validated = true;
             Validate(func as Block);
             Validate(func.Type);
+            func.Validated = true;
         }
 
         void Validate(Label label) {
@@ -455,9 +453,9 @@ namespace Run {
                 Builder.Program.AddError(Error.UnknownType, array);
                 return;
             }
-            if (array.Type.ArrayOf != null) {
-                array.Type = array.Type.ArrayOf.Type;
-            }
+            //if (array.Type.ArrayOf != null) {
+            //    array.Type = array.Type.ArrayOf.Type;
+            //}
             Validate(array.Type);
             ValidateParameters(array, exp);
         }
@@ -578,8 +576,10 @@ namespace Run {
                 for (int i = 0; i < call.Values.Count; i++) {
                     var value = call.Values[i] as ValueType;
                     var param = func.Parameters.Children[i] as Parameter;
-                    if (value.Type == null) return false;
-                    if (value.Type.IsCompatible(param.Type) == false) {
+                    if (value.Type == null) {
+                        Validate(value);
+                    }
+                    if (value.Type?.IsCompatible(param.Type) == false) {
                         return false;
                     }
                 }
@@ -616,10 +616,16 @@ namespace Run {
                     if (ValidateCall(call, func)) return func;
                 }
             }
-            if (call.FindParent<New>() is New) {
+            if (call.FindParent<New>() is New n) {
                 if (Builder.Classes.TryGetValue(call.Token.Value, out Class newCls)) {
                     foreach (var func in FindClosestFunction(newCls, call.Token.Value, call.Values.Count)) {
                         if (ValidateCall(call, func)) return func;
+                    }
+                    var count = call.Values?.Count ?? 0;
+                    foreach (var ctor in newCls.Find<Constructor>()) {
+                        if (count == (ctor.Parameters?.Children.Count ?? 0)) {
+                            return ctor;
+                        }
                     }
                 }
             }
@@ -785,17 +791,13 @@ namespace Run {
         }
 
         void Validate(New n, ExpressionV2 exp) {
-            if (n.Expression.Result is Caller call && call is not Array) {
-                //Validate(call, exp, false);
-                //if (call.Type == null) {
-                //    if (Builder.Find(call.Token.Value) is Class cls) {
-                //        call.Type = n.Type = cls;
-                //        return;
-                //    }
-                //}
+            if (n.Caller is ArrayV2 array) {
+                Validate(array, exp);
+                n.Type = array.Type;
+                return;
             }
-            Validate(n.Expression);
-            n.Type = (n.Expression)?.Type;
+            Validate(n.Caller, exp);
+            n.Type = n.Caller?.Type;
         }
         void Validate(AST ast, ExpressionV2 exp) {
             if (ast is ValueType vt && vt.Type != null) return;
@@ -810,6 +812,7 @@ namespace Run {
                 case Ternary ter: Validate(ter, exp); break;
                 case Parenteses p: Validate(p, exp); break;
                 case Base b: Validate(b); break;
+                case ExpressionV2 ev2: Validate(ev2); break;
                 case MemberAccess dot: Validate(dot, exp); break;
                 case Cast cast: Validate(cast, exp); break;
                 case Scope s: Validate(s, exp); break;
@@ -819,6 +822,7 @@ namespace Run {
                 case TypeOf t: Validate(t, exp); break;
                 case New n: Validate(n, exp); break;
                 case Comparation comp: Validate(comp, exp); break;
+                case Indexer idx: Validate(idx, exp); break;
                 case Binary bin: Validate(bin, exp); break;
                 case This t: Validate(t, exp); break;
                 case Unary un: Validate(un, exp); break;
@@ -827,6 +831,24 @@ namespace Run {
             }
             if (ast is ValueType v && v.Type != null && v.Type.Validated == false) {
                 Validate(v.Type);
+            }
+        }
+
+        void Validate(Indexer idx, ExpressionV2 exp) {
+            Validate(idx.Left, exp);
+            Validate(idx.Right, exp);
+            var vtl = idx.Left as ValueType;
+            var vtr = idx.Right as ValueType;
+            if (vtl == null || vtl.Type == null || vtr == null || vtr.Type == null) {
+                idx.Program.AddError(Error.InvalidExpression, idx);
+                return;
+            }
+            if (vtr.Type.IsNumber == false) {
+                idx.Program.AddError(Error.ExpectingName, idx.Right);
+                return;
+            }
+            if (vtl.Type.ArrayOf != null) {
+                idx.Type = vtl.Type.ArrayOf.Type;
             }
         }
 
@@ -920,7 +942,7 @@ namespace Run {
             }
             Validate(ternary.IsTrue);
             Validate(ternary.IsFalse);
-            if (AreCompatible(ternary.IsFalse, ternary.IsTrue) == false) {
+            if (AreCompatible(Builder, ternary.IsFalse, ternary.IsTrue) == false) {
                 Builder.Program.AddError(Error.IncompatibleType, ternary.Condition);
                 return;
             }
@@ -969,12 +991,12 @@ namespace Run {
                 bin.Type = right.Type;
                 return;
             }
-            if (AreCompatible(left is ExpressionV2 v2 ? v2.Result as ValueType : left, right is ExpressionV2 v2_ ? v2_.Result as ValueType : right) == false) {
+            if (AreCompatible(Builder, left is ExpressionV2 v2 ? v2.Result as ValueType : left, right is ExpressionV2 v2_ ? v2_.Result as ValueType : right) == false) {
                 Builder.Program.AddError(right.Token ?? left.Token, Error.IncompatibleType);
                 return;
-            } else if (AreCompatible(left is ExpressionV2 l ? l.Result as ValueType : left, right is ExpressionV2 r ? r.Result as ValueType : right) == false) {
-                Builder.Program.AddError(right.Token ?? left.Token, Error.IncompatibleType);
-                return;
+                //} else if (AreCompatible(Builder, left is ExpressionV2 l ? l.Result as ValueType : left, right is ExpressionV2 r ? r.Result as ValueType : right) == false) {
+                //    Builder.Program.AddError(right.Token ?? left.Token, Error.IncompatibleType);
+                //    return;
             }
             switch (bin.Token.Family) {
                 case TokenType.LOGICAL:
@@ -986,17 +1008,27 @@ namespace Run {
             }
         }
 
-        public static bool AreCompatible(ValueType vt1, ValueType vt2) {
+        public static bool AreCompatible(ValueType vt1, ValueType vt2) => AreCompatible(null, vt1, vt2);
+
+        public static bool AreCompatible(Builder builder, ValueType vt1, ValueType vt2) {
             var t1 = vt1.Type;
             var t2 = vt2.Type;
+            if (t1?.ArrayOf != null && vt2 is Indexer && t1.ArrayOf.Type == t2) return true;
+            if (t2?.ArrayOf != null && vt1 is Indexer && t2.ArrayOf.Type == t1) return true;
             if (vt1 is Null && vt2 is Null) return true;
             if (vt1 is Null && t2 != null && t2.IsPrimitive == false) return true;
             if (vt2 is Null && t1 != null && t1.IsPrimitive == false) return true;
             if (t1 == null || t2 == null) return false;
             if (t1 == t2) return true;
-            if (t1.IsNumber && t2.IsNumber) return true;
-            if (t1.IsNative == t2.IsNative) return true;
-            if (t1.Token.Value == t2.Token.Value) return true;
+            if (t1.IsNumber && t2.IsNumber) {
+                return true;
+            }
+            if (t1.IsNative == t2.IsNative) {
+                return !(builder != null && (t1 == builder.String || t2 == builder.String));
+            }
+            if (t1.Token.Value == t2.Token.Value) {
+                return true;
+            }
             return false;
         }
         public static bool AreCompatible(Class t1, Class t2) {

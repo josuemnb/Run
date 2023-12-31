@@ -61,17 +61,18 @@ namespace Run {
             Module = parent.Module;
             Program = parent.Program;
             Scanner = parent.Scanner;
+            if (Token == null) {
+                Token = Scanner.Current;
+            }
             Level = parent.Level + 1;
         }
 
-        public AST Root {
-            get {
-                var temp = this;
-                while (temp.Parent != null) {
-                    temp = temp.Parent;
-                }
-                return temp;
+        public AST GetRoot() {
+            var temp = this;
+            while (temp.Parent != null) {
+                temp = temp.Parent;
             }
+            return temp;
         }
 
         public virtual AST FindName(string name) {

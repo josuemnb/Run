@@ -499,13 +499,33 @@ namespace Run {
         public AST Member;
         public override void Save(TextWriter writer, Builder builder) {
             switch (Member) {
+                case CallerV2 cv2:
+                    writer.Write(cv2.Real);
+                    writer.Write('(');
+                    if (cv2.Function.Access == AccessType.STATIC) {
+                        cv2.SaveValues(writer, builder, false);
+                    } else {
+                        //if (Parent is MemberAccess) {
+                        //    var buffer = new StringWriter();
+                        //    WriteParentAcess(this, buffer, builder);
+                        //    writer.Write(buffer.ToString());
+                        //    if (This is Identifier id) {
+                        //        id.From = null;
+                        //    }
+                        //}
+                        This.Save(writer, builder);
+                        cv2.SaveValues(writer, builder, true);
+                    }
+                    writer.Write(')');
+                    break;
                 case Array array:
                     array.Save(writer, builder);
                     break;
                 case MemberAccess access:
-                    This.Save(writer, builder);
-                    writer.Write("->");
                     access.Save(writer, builder);
+                    //This.Save(writer, builder);
+                    //writer.Write("->");
+                    //access.Save(writer, builder);
                     break;
                 case Caller call:
                     writer.Write(call.Real);

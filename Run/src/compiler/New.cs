@@ -1,37 +1,82 @@
-﻿using System.Collections.Generic;
-using System.IO;
+﻿using System.IO;
 
 namespace Run {
     public class New : ValueType {
-        public ExpressionV2 Expression;
-        //public DeclaredType Declared;
+        //public ExpressionV2 Expression;
+        public CallerV2 Caller;
+        public ValueType Calling;
+        //example
+        //new int[5]
+        //new string("hello")
+        //new nmspc.class()
+
         public override void Parse() {
-            Expression = new ExpressionV2();
-            Expression.SetParent(this);
-            Expression.Parse();
-            //Declared = new DeclaredType();
-            //Declared.SetParent(this);
-            //Declared.Parse();
+        again:
+            if (GetName(out Token) == false) {
+                return;
+            }
+            if (Calling == null) {
+                Calling = new Identifier {
+                    Token = Token,
+                };
+                Calling.SetParent(this);
+            } else {
+                Calling = new Qualifier {
+                    Left = Calling,
+                    Right = new Identifier {
+                        Token = Token,
+                    },
+                };
+                Calling.SetParent(this);
+                (Calling as Qualifier).Right.SetParent(Calling);
+            }
+            if (Scanner.Expect('.')) {
+                goto again;
+            }
+            if (Scanner.Expect('(')) {
+                Caller = new CallerV2 {
+                    Token = Token,
+                    From = Calling,
+                };
+                Caller.SetParent(this);
+                if (Scanner.Expect(')') == false) {
+                    Caller.Parse();
+                }
+                Scanner.Scan();
+            } else if (Scanner.Expect('[')) {
+                Caller = new ArrayV2 {
+                    Token = Token,
+                    From = Calling,
+                };
+                Caller.SetParent(this);
+                if (Scanner.Expect(']') == false) {
+                    Caller.Parse();
+                }
+            } else {
+                Program.AddError(Scanner.Current, Error.ExpectingOpenParentesesOrBrackets);
+                return;
+            }
+            //Expression = new ExpressionV2();
+            //Expression.SetParent(this);
+            //Expression.Parse();
         }
 
         public override void Print() {
             base.Print();
-            Expression?.Print();
+            //Expression?.Print();
+            Caller?.Print();
         }
 
         public override void Save(TextWriter writer, Builder builder) {
-            if (Expression == null) {
-                return;
-            }
-            if (Expression.Result is Array arr) {
+            if (Caller is ArrayV2 array) {
                 writer.Write("NEW(");
-                writer.Write(arr.Type.Real);
-                arr.SaveValues(writer, builder, true);
+                writer.Write(array.Type.Real);
+                array.SaveValues(writer, builder, true);
                 writer.Write(",");
-                writer.Write(arr.Type.ID);
-            } else if (Expression.Result is Caller call) {
-                if (call.Type.IsNative == false) {
-                    writer.Write(call.Real);
+                writer.Write(array.Type.ID);
+            } else {
+                if (Caller.Type.IsNative == false) {
+                    writer.Write(Caller.Real);
                     writer.Write("(");
                     writer.Write(Type.Real);
                     writer.Write("_initializer(");
@@ -41,12 +86,12 @@ namespace Run {
                 writer.Write(",1,");
                 writer.Write(Type.ID);
                 writer.Write(")");
-                if (call.Type.IsNative) {
+                if (Caller.Type.IsNative) {
                     return;
                 }
                 writer.Write(')');
-                if (call.Values.Count > 0) {
-                    foreach (var value in call.Values) {
+                if (Caller.Values.Count > 0) {
+                    foreach (var value in Caller.Values) {
                         writer.Write(',');
                         value.Save(writer, builder);
                     }
