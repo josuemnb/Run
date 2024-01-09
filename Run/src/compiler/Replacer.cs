@@ -1,21 +1,110 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.Text;
 
 namespace Run {
+
+    public struct ReplaceToken {
+        public string Format;
+        public object[] Args;
+    }
     public class Replacer {
         public Builder Builder;
+        public Dictionary<string, ReplaceToken> TokenAnnotations = new(0);
         public Replacer(Builder builder) {
             Builder = builder;
         }
         public void Replace() {
+            //RegisterAnnotations();
             Replace(Builder.Program);
         }
+
+        void RegisterAnnotations() {
+            foreach (var ast in Builder.Classes.Values) {
+                if (ast.Annotations != null) {
+                    for (int i = 0; i < ast.Annotations.Count; i++) {
+                        var ann = ast.Annotations[i];
+                        if (ann.IsReplace) {
+                            ast.Usage++;
+                            var split = ann.Value.Split('=');
+                            if (split.Length != 2) continue;
+                            if (System.Enum.TryParse<TokenType>(split[0], out _) == false) {
+                                Builder.Program.AddError(ann.Token, Error.UnknownTokenType);
+                                continue;
+                            }
+                            var s = split[1].Trim();
+                            ReplaceToken replacer = new();
+                            if (s.Contains('.')) {
+                                var format = new StringBuilder();
+                                var args = new List<object>();
+                                int l = 0;
+                                int count = 0;
+                                while (l < s.Length) {
+                                    if (s[l] == '.') {
+                                        if (char.IsLetter(s[l + 1])) {
+                                            l++;
+                                            int p = l;
+                                            while (char.IsLetter(s[l])) {
+                                                l++;
+                                            }
+                                            var prop = s[p..l];
+                                            switch (prop) {
+                                                case "Value":
+                                                    format.Append("\"{").Append(count++).Append("}\"");
+                                                    args.Add(ann.Token.Value);
+                                                    break;
+                                                case "Length":
+                                                    format.Append("{").Append(count++).Append("}");
+                                                    args.Add(ann.Token.Length);
+                                                    break;
+                                                default:
+                                                    if (ann.Token.GetType().GetProperty(prop) is var propInfo && propInfo != null) {
+                                                        format.Append("{").Append(count++).Append("}");
+                                                        args.Add(propInfo.GetValue(ann.Token));
+                                                    }
+                                                    break;
+                                            }
+                                        }
+                                        continue;
+                                    } else if (s[l] == '{' || s[l] == '}') {
+                                        format.Append(s[l]);
+                                    }
+                                    format.Append(s[l]);
+                                    l++;
+                                }
+                                replacer = new ReplaceToken() {
+                                    Format = format.ToString(),
+                                    Args = args.ToArray(),
+                                };
+                            }
+                            if (TokenAnnotations.TryAdd(split[0], replacer) == false) {
+                                Builder.Program.AddError(ann.Token, Error.TokenAnnotationAlreadyExists);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        void ApplyAnnotations(AST ast) {
+            if (TokenAnnotations.Count == 0) return;
+            if (ast.Token != null && ast.Token.Type != TokenType.NONE) {
+                if (TokenAnnotations.TryGetValue(ast.Token.Type.ToString(), out var replacer)) {
+                    ast.Token.Value = string.Format(replacer.Format, replacer.Args);
+                }
+            }
+        }
+
         Block Replace(Block block) {
             for (int i = 0; i < block.Children.Count; i++) {
                 block.Children[i] = Replace(block.Children[i]);
             }
             return block;
         }
+
         AST Replace(AST ast) {
+            //ApplyAnnotations(ast);
             switch (ast) {
                 case For @for: return Replace(@for);
                 case If @if: return Replace(@if);
@@ -24,7 +113,7 @@ namespace Run {
                 case Property property: return Replace(property);
                 case Var var: return Replace(var);
                 case Block block: return Replace(block);
-                case ExpressionV2 expr: expr.Result = Replace(expr.Result); return expr;
+                case Expression expr: expr.Result = Replace(expr.Result); return expr;
                 case Caller call: return Replace(call);
                 case Ternary ter: return Replace(ter);
                 case Parenteses p: return Replace(p);
@@ -98,9 +187,9 @@ namespace Run {
             return var;
         }
         AST Replace(Caller call) {
-            if (call.Values != null) {
-                for (int i = 0; i < call.Values.Count; i++) {
-                    call.Values[i] = Replace(call.Values[i]);
+            if (call.Parameters != null) {
+                for (int i = 0; i < call.Parameters.Count; i++) {
+                    call.Parameters[i] = Replace(call.Parameters[i]);
                 }
             }
             return call;
@@ -131,7 +220,7 @@ namespace Run {
                         Parent = id.Parent,
                         From = property,
                         Real = property.Setter.Real,
-                        Values = new List<AST>() { parent.Right },
+                        Parameters = new() { parent.Right },
                     };
                 }
                 return new Caller {
@@ -144,11 +233,11 @@ namespace Run {
             return id;
         }
         AST Replace(MemberAccess memberAccess) {
-            memberAccess.This = Replace(memberAccess.This);
-            memberAccess.Member = Replace(memberAccess.Member);
-            if (memberAccess.Member is PropertySetter caller && caller.Back > 0) {
+            memberAccess.Left = Replace(memberAccess.Left);
+            memberAccess.Right = Replace(memberAccess.Right);
+            if (memberAccess.Right is PropertySetter caller && caller.Back > 0) {
                 caller.Back--;
-                caller.This = memberAccess.This;
+                caller.This = memberAccess.Left;
                 return caller;
             }
             return memberAccess;
@@ -167,7 +256,7 @@ namespace Run {
         }
         AST Replace(New @new) {
             //@new.Expression.Result = Replace(@new.Expression.Result);
-            @new.Caller = (CallerV2)Replace(@new.Caller);
+            @new.Caller = (Caller)Replace(@new.Caller);
             //@new.Calling = Replace(@new.Calling);
             return @new;
         }
@@ -196,7 +285,7 @@ namespace Run {
                         Function = op,
                         Type = op.Type,
                         Real = op.Real,
-                        Values = new List<AST>() { bin.Left, bin.Right },
+                        Parameters = new() { bin.Left, bin.Right },
                     };
                 }
             }

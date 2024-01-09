@@ -15,7 +15,7 @@ namespace Run {
                     Add<Return>().Parse();
                     return;
                 }
-                Add<ExpressionV2>().Parse();
+                Add<Expression>().Parse();
                 return;
             }
             if (Scanner.Expect('{') == false) {
@@ -37,7 +37,7 @@ namespace Run {
         }
     }
     public class Case : Default {
-        internal List<ExpressionV2> Expressions = new List<ExpressionV2>(0);
+        internal List<Expression> Expressions = new List<Expression>(0);
         public int Count = 0;
         public override void Parse() {
             Token = Scanner.Test();
@@ -48,7 +48,7 @@ namespace Run {
                 }
             }
         again:
-            var exp = new ExpressionV2();
+            var exp = new Expression();
             exp.SetParent(this);
             exp.Parse();
             Expressions.Add(exp);
@@ -92,11 +92,11 @@ namespace Run {
     }
 
     public class Switch : Block {
-        internal ExpressionV2 Expression;
+        internal Expression Expression;
         public Class Type;
         public bool SameType = true;
         public override void Parse() {
-            Expression = new ExpressionV2();
+            Expression = new Expression();
             Expression.SetParent(this);
             Expression.Parse();
             if (Expression.Result == null) {

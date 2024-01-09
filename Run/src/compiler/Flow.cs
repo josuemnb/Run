@@ -53,10 +53,10 @@ namespace Run {
     }
 
     public class If : Block {
-        public ExpressionV2 Condition;
+        public Expression Condition;
 
         public override void Parse() {
-            Condition = new ExpressionV2();
+            Condition = new Expression();
             Condition.SetParent(this);
             Condition.Parse();
             //if (Scanner.Expect("=>")) {
@@ -98,8 +98,8 @@ namespace Run {
     }
     public class For : Block {
         public AST Start;
-        public ExpressionV2 Condition;
-        public ExpressionV2 Step;
+        public Expression Condition;
+        public Expression Step;
         int Stage = -1;
 
         public override void Parse() {
@@ -124,20 +124,20 @@ namespace Run {
                         Scanner.Scan();
                         current = Start = new Var();
                     } else {
-                        current = Start = new ExpressionV2();
+                        current = Start = new Expression();
                     }
                     break;
                 case 1:
-                    current = Condition = new ExpressionV2();
+                    current = Condition = new Expression();
                     break;
                 case 2:
-                    current = Step = new ExpressionV2();
+                    current = Step = new Expression();
                     break;
             }
             current?.SetParent(this);
             current?.Parse();
             Scanner.RollBack();
-            if (current is ExpressionV2 exp && exp.HasError) {
+            if (current is Expression exp && exp.HasError) {
                 return;
             }
             if (Stage < 2) {
@@ -162,7 +162,7 @@ namespace Run {
                 case -1:
                     writer.Write("while(1");
                     break;
-                case 0 when Start is ExpressionV2 condition:
+                case 0 when Start is Expression condition:
                     writer.Write("while(");
                     condition.Save(writer, builder);
                     break;

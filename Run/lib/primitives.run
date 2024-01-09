@@ -75,8 +75,8 @@ type i32 {
 }
 
 @primitive
-@native(short)
 @number
+@native(short)
 type i16 { 
 	func toString:string => NumberHelper.toString(this as i64, 7)	
 	static var max:i16 => 32767
@@ -84,8 +84,8 @@ type i16 {
 }
 
 @primitive
-@native(char)
 @number
+@native(char)
 type i8 { 
 	func toString:string => NumberHelper.toString(this as i64, 5)	
 	static var max:i8 => 127
@@ -133,8 +133,8 @@ type u32 {
 }
 
 @primitive
-@native(unsigned short)
 @number
+@native(unsigned short)
 type u16 { 
 	func toString:string => NumberHelper.toString(this as u64, 7)	
 	static var max:u16 => 65535
@@ -142,8 +142,8 @@ type u16 {
 }
 
 @primitive
-@native(unsigned char)
 @number
+@native(unsigned char)
 type u8 { 
 	func toString:string => NumberHelper.toString(this as u64, 5)
 	static var max:u8 => 255
@@ -157,8 +157,8 @@ type bool {
 }
 
 @primitive
-@native(float)
 @number
+@native(float)
 type f32 { 
 	func toString: string {	
 		var s = new i8[20]
@@ -170,8 +170,8 @@ type f32 {
 }
 
 @primitive
-@native(double)
 @number
+@native(double)
 type f64 { 
 	func toString: string {	
 		var s = new i8[26]
@@ -183,8 +183,8 @@ type f64 {
 }
 
 @primitive
-@native(unsigned char)
 @number
+@native(unsigned char)
 type byte { }
 
 @primitive

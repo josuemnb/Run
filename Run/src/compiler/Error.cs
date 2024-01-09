@@ -34,11 +34,13 @@
         public static readonly string AnnotationsNotAllowedInsideFunctionScope = "Annotation not allowed inside function scope";
         public static readonly string InvalidAccessDefinition = "Invalid Access Definition. Not Allowed in Modules";
         public static readonly string IncompatibleAccessClassStatic = "Invalid Access Definition. Parent Class is Static";
+        public static readonly string InvalidAccessFunctionStatic = "Invalid Access Definition. Function is Static";
         public static readonly string BadFormatted = "Bad Formatted";
         public static readonly string InvalidExpression = "Invalid Expression";
         public static readonly string DoubleArrayNotSupported = "Double Array ExpressionV2 Not Supported";
         public static readonly string IncompatibleType = "Incompatible Types";
         public static readonly string NameAlreadyExists = "Name already exists";
+        public static readonly string TokenAnnotationAlreadyExists = "Token annotation already exists";
         public static readonly string VariadicParameterAlreadyDefined = "No more parameters after variadic parameter definition";
         public static readonly string TypeIsNotArrayDefined = "Type is not @array defined";
         public static readonly string BaseMustBeInsideClass = "Base must be inside of class function member";
@@ -62,6 +64,7 @@
         public static readonly string InterfaceMemberHasDifferentReturnType = "Interface member has different return type";
         public static readonly string InterfaceMemberHasDifferentParameters = "Interface member has different parameters";
         public static readonly string InterfaceNotImplementedCorrect = "Interface not implemented correct";
+        public static readonly string UnknownTokenType = "Unknown token type";
 
         public override string ToString() {
             if (Token == null || Token.Value == null) {

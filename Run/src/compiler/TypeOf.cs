@@ -2,14 +2,14 @@
 
 namespace Run {
     public class TypeOf : ValueType {
-        public ExpressionV2 Expression;
+        public Expression Expression;
 
         public override void Parse() {
             if (Scanner.Expect('(') == false) {
                 Program.AddError(Scanner.Current, Error.ExpectingOpenParenteses);
                 return;
             }
-            Expression = new ExpressionV2();
+            Expression = new Expression();
             Expression.SetParent(this);
             Expression.Parse();
             if (Scanner.Expect(')') == false) {

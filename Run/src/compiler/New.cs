@@ -3,7 +3,7 @@
 namespace Run {
     public class New : ValueType {
         //public ExpressionV2 Expression;
-        public CallerV2 Caller;
+        public Caller Caller;
         public ValueType Calling;
         //example
         //new int[5]
@@ -34,7 +34,7 @@ namespace Run {
                 goto again;
             }
             if (Scanner.Expect('(')) {
-                Caller = new CallerV2 {
+                Caller = new Caller {
                     Token = Token,
                     From = Calling,
                 };
@@ -44,7 +44,7 @@ namespace Run {
                 }
                 Scanner.Scan();
             } else if (Scanner.Expect('[')) {
-                Caller = new ArrayV2 {
+                Caller = new Array {
                     Token = Token,
                     From = Calling,
                 };
@@ -68,7 +68,7 @@ namespace Run {
         }
 
         public override void Save(TextWriter writer, Builder builder) {
-            if (Caller is ArrayV2 array) {
+            if (Caller is Array array) {
                 writer.Write("NEW(");
                 writer.Write(array.Type.Real);
                 array.SaveValues(writer, builder, true);
@@ -90,8 +90,8 @@ namespace Run {
                     return;
                 }
                 writer.Write(')');
-                if (Caller.Values.Count > 0) {
-                    foreach (var value in Caller.Values) {
+                if (Caller.Parameters.Count > 0) {
+                    foreach (var value in Caller.Parameters) {
                         writer.Write(',');
                         value.Save(writer, builder);
                     }

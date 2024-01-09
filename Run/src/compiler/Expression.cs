@@ -1,173 +1,409 @@
-﻿using System;
+﻿using System.Linq;
+using System;
 using System.Collections.Generic;
 using System.IO;
+using Newtonsoft.Json.Linq;
 
 namespace Run {
-    public class ValueType : AST {
-        public Class Type;
-        public bool IsNull;
-    }
-    public class Expression_ : ValueType {
+    public class Expression : ValueType {
         public AST Result;
-        static Expression_ Current;
+        public bool FromNewKeyword;
         public bool HasError { get; private set; }
-        public Expression_() { }
-        internal enum PrecedenceLevel {
-            Assignment,
-            Ternary,
-            LogicalOR,
-            LogicalAND,
-            BitwiseOR,
-            BitwiseXOR,
-            BitwiseAND,
-            Equality,
-            Relational,
-            Shift,
-            Additive,
-            Multiplicative,
-            Unary,
-            //MemberAcess,
-            Postfix,
+
+        public override string ToString() {
+            return Result?.ToString();
         }
-        static readonly Dictionary<TokenType, PrecedenceLevel> Precedences = new() {
-            { TokenType.ASSIGN, PrecedenceLevel.Assignment },
-            { TokenType.PLUS_ASSIGN, PrecedenceLevel.Assignment },
-            { TokenType.MINUS_ASSIGN, PrecedenceLevel.Assignment },
-            { TokenType.MULTIPLY_ASSIGN, PrecedenceLevel.Assignment },
-            { TokenType.DIVIDE_ASSIGN, PrecedenceLevel.Assignment },
-            { TokenType.EQUAL, PrecedenceLevel.Equality },
-            { TokenType.NOT_EQUAL, PrecedenceLevel.Equality },
-            { TokenType.NOT, PrecedenceLevel.Unary },
-            { TokenType.INCREMENT, PrecedenceLevel.Unary },
-            { TokenType.DECREMENT, PrecedenceLevel.Unary },
-            { TokenType.BANG, PrecedenceLevel.Unary },
-            { TokenType.AND, PrecedenceLevel.LogicalAND },
-            { TokenType.OR, PrecedenceLevel.LogicalOR },
-            { TokenType.LOWER_OR_EQUAL, PrecedenceLevel.Relational },
-            { TokenType.LOWER, PrecedenceLevel.Relational },
-            { TokenType.GREATHER, PrecedenceLevel.Relational },
-            { TokenType.GREAT_OR_EQUAL, PrecedenceLevel.Relational },
-            { TokenType.PLUS, PrecedenceLevel.Additive },
-            { TokenType.MINUS, PrecedenceLevel.Additive },
-            { TokenType.MULTIPLY, PrecedenceLevel.Multiplicative },
-            { TokenType.DIVIDE, PrecedenceLevel.Multiplicative },
-            { TokenType.MOD, PrecedenceLevel.Multiplicative },
-            { TokenType.DOT, PrecedenceLevel.Postfix },
-            { TokenType.OPEN_PARENTESES, PrecedenceLevel.Postfix },
-            { TokenType.OPEN_ARRAY, PrecedenceLevel.Postfix }
-        };
 
-        static readonly Dictionary<TokenType, Func<AST, AST>> AditionalsPrefixes = new() {
-            { TokenType.LOWER, ParseUnary },
-            { TokenType.LOWER_OR_EQUAL, ParseUnary },
-            { TokenType.DIFFERENT, ParseUnary },
-            { TokenType.EQUAL, ParseUnary },
-            { TokenType.GREATHER, ParseUnary },
-            { TokenType.GREAT_OR_EQUAL, ParseUnary },
-        };
-        static readonly Dictionary<TokenType, Func<AST, AST>> Prefixes = new() {
-            { TokenType.NAME, ParseIdentifier },
-            { TokenType.NUMBER, ParseLiteral },
-            { TokenType.REAL, ParseLiteral },
-            { TokenType.QUOTE, ParseLiteral },
-            { TokenType.CHAR, ParseLiteral },
-            { TokenType.NOT, ParseBang },
-            { TokenType.MINUS, ParseUnary },
-            { TokenType.INCREMENT, ParseUnary },
-            { TokenType.DECREMENT, ParseUnary },
-            { TokenType.OPEN_PARENTESES, ParseParenteses },
-        };
+        public override void Print() {
+            AST.Print(this);
+            if (Result != null) {
+                Result.Level = Level + 1;
+                PrintAST(Result);
+            }
+        }
 
-        static readonly Dictionary<TokenType, Func<AST, AST, AST>> Sufixes = new() {
-            { TokenType.ASSIGN, ParseAssign },
-            { TokenType.MINUS, ParseBinary },
-            { TokenType.TERNARY, ParseTernary },
-            { TokenType.MINUS_ASSIGN, ParseBinary },
-            { TokenType.PLUS_ASSIGN, ParseBinary },
-            { TokenType.MULTIPLY_ASSIGN, ParseBinary },
-            { TokenType.DIVIDE_ASSIGN, ParseBinary },
-            { TokenType.PLUS, ParseBinary },
-            { TokenType.INCREMENT, ParseUnary },
-            { TokenType.DECREMENT, ParseUnary },
-            { TokenType.OR, ParseComparation },
-            { TokenType.DIFFERENT, ParseComparation },
-            { TokenType.NOT, ParseComparation },
-            { TokenType.AND, ParseComparation },
-            { TokenType.GREATHER, ParseComparation },
-            { TokenType.GREAT_OR_EQUAL, ParseComparation },
-            { TokenType.LOWER, ParseComparation },
-            { TokenType.LOWER_OR_EQUAL, ParseComparation },
-            { TokenType.DIVIDE, ParseBinary },
-            { TokenType.MOD, ParseBinary },
-            { TokenType.MULTIPLY, ParseBinary },
-            { TokenType.EQUAL, ParseBinary },
-            { TokenType.OPEN_PARENTESES, ParseCall },
-            { TokenType.DOT, ParseDot },
-            { TokenType.OPEN_ARRAY, ParseArray },
-            { TokenType.AS, ParseAs },
-        };
+        void PrintAST(AST ast) {
+            if (ast == null) return;
+            AST.Print(ast);
+            switch (ast) {
+                case Block b:
+                    foreach (var child in b.Children) {
+                        child.Level = ast.Level + 1;
+                        PrintAST(child);
+                    }
+                    break;
+                case Expression exp:
+                    PrintAST(exp.Result);
+                    break;
+                case MemberAccess ma:
+                    ma.Left.Level = ast.Level + 1;
+                    ma.Right.Level = ast.Level + 1;
+                    PrintAST(ma.Left);
+                    PrintAST(ma.Right);
+                    break;
+                case Binary bin:
+                    bin.Left.Level = ast.Level + 1;
+                    bin.Right.Level = ast.Level + 1;
+                    PrintAST(bin.Left);
+                    PrintAST(bin.Right);
+                    break;
+                case Unary un:
+                    un.Right.Level = ast.Level + 1;
+                    PrintAST(un.Right);
+                    break;
+                case Parenteses par:
+                    par.Expression.Level = ast.Level + 1;
+                    PrintAST(par.Expression);
+                    break;
+                case Caller call:
+                    if (call.From != null) {
+                        call.From.Level = ast.Level + 1;
+                        PrintAST(call.From);
+                    }
+                    foreach (var child in call.Parameters) {
+                        child.Level = ast.Level + 2;
+                        PrintAST(child);
+                    }
+                    break;
+                case Ternary ter:
+                    ter.Condition.Level = ast.Level + 1;
+                    ter.IsTrue.Level = ast.Level + 1;
+                    ter.IsFalse.Level = ast.Level + 1;
+                    PrintAST(ter.Condition);
+                    PrintAST(ter.IsTrue);
+                    PrintAST(ter.IsFalse);
+                    break;
+                case As a:
+                    a.Level = ast.Level + 1;
+                    a.Declared.Level = ast.Level + 1;
+                    PrintAST(a.Left);
+                    PrintAST(a.Declared);
+                    break;
+                case New n:
+                    //n.Level = ast.Level + 1;
+                    n.Caller.Level = ast.Level + 1;
+                    n.Calling.Level = ast.Level + 1;
+                    //PrintAST(n.Calling);
+                    PrintAST(n.Caller);
+                    break;
+                case SizeOf sz:
+                    sz.Expression.Level = ast.Level + 1;
+                    PrintAST(sz.Expression);
+                    break;
+                case TypeOf ty:
+                    ty.Expression.Level = ast.Level + 1;
+                    PrintAST(ty.Expression);
+                    break;
+                case Delete del:
+                    del.Block.Level = ast.Level + 1;
+                    PrintAST(del.Block);
+                    break;
+                case Ref rf:
+                    rf.Expression.Level = ast.Level + 1;
+                    PrintAST(rf.Expression);
+                    break;
+            }
+        }
 
-        internal static AST ParseAs(AST parent, AST left) {
-            if (parent.Scanner.Test().Type != TokenType.NAME) {
+        public override void Parse() {
+            Scanner.Scan();
+            Result = EvalExpression(this);
+        }
+
+        public override void Save(TextWriter writer, Builder builder) => Save(Result, writer, builder);
+        void Save(AST ast, TextWriter writer, Builder builder) {
+            switch (ast) {
+                //case Literal lit: writer.Write(lit.Token.Value); break;
+                //case Literal lit: lit.Save(writer, builder); break;
+                default: ast.Save(writer, builder); break;
+            }
+        }
+
+        static ValueType Eval<T>(ValueType parent, Func<ValueType, ValueType> func, params TokenType[] types) where T : Binary, new() {
+            var result = func(parent);
+            if (result != null) {
+                while (types.Contains(parent.Scanner.Current.Type)) {
+                    var op = parent.Scanner.Current;
+                    parent.Scanner.Scan();
+                    var right = func(parent);
+                    if (right == result) {
+                        return result;
+                    }
+                    result = new T() { Token = op, Left = result, Right = right };
+                    result.SetParent(parent);
+                }
+            }
+            return result;
+        }
+
+        static ValueType EvalExpression(ValueType parent) {
+            var result = EvalAssign(parent);
+            if (parent.Scanner.Current.Type == TokenType.TERNARY) {
+                var ternary = new Ternary(result);
+                ternary.SetParent(parent);
+                ternary.Parse();
+                return ternary;
+            }
+            return result;
+        }
+
+        static ValueType EvalAssign(ValueType parent) {
+            return Eval<Assign>(parent, EvalLogicalOr, TokenType.ASSIGN);
+        }
+
+        static ValueType EvalLogicalOr(ValueType parent) {
+            return Eval<Binary>(parent, EvalLogicalAnd, TokenType.OR);
+        }
+        static ValueType EvalLogicalAnd(ValueType parent) {
+            return Eval<Binary>(parent, EvalComparation, TokenType.AND);
+        }
+
+        static ValueType EvalComparation(ValueType parent) {
+            return Eval<Binary>(parent, EvalAddSub, TokenType.LOWER, TokenType.LOWER_OR_EQUAL, TokenType.EQUAL, TokenType.DIFFERENT, TokenType.GREATHER, TokenType.GREAT_OR_EQUAL);
+        }
+        static ValueType EvalAddSub(ValueType parent) {
+            return Eval<Binary>(parent, EvalMulDiv, TokenType.MINUS, TokenType.PLUS, TokenType.PLUS_ASSIGN, TokenType.MINUS_ASSIGN);
+        }
+
+        static ValueType EvalMulDiv(ValueType parent) {
+            return Eval<Binary>(parent, EvalUnary, TokenType.MULTIPLY, TokenType.DIVIDE, TokenType.MOD, TokenType.MULTIPLY_ASSIGN, TokenType.DIVIDE_ASSIGN);
+        }
+
+        static ValueType EvalUnary(ValueType parent) {
+            Token unary = null;
+            if (parent.Scanner.Current.Type == TokenType.MINUS || parent.Scanner.Current.Type == TokenType.INCREMENT || parent.Scanner.Current.Type == TokenType.DECREMENT) {
+                unary = parent.Scanner.Current;
+                parent.Scanner.Scan();
+            }
+            var ret = EvalOthers(parent);
+            if (unary != null) {
+                var un = new Unary() { Token = unary, Right = ret };
+                un.SetParent(parent);
+                return un;
+            } else if (parent.Scanner.Current.Type == TokenType.INCREMENT || parent.Scanner.Current.Type == TokenType.DECREMENT) {
+                unary = parent.Scanner.Current;
+                parent.Scanner.Scan();
+                var un = new Unary() { Token = unary, Right = ret, AtRight = true, };
+                un.SetParent(parent);
+                return un;
+            }
+            return ret;
+            //return ParseOthers(parent, ret);
+            //return EvalMemberAccess(ret);
+        }
+
+        static ValueType EvalOthers(ValueType value) {
+            var result = EvalPrimary(value);
+            return EvalExtras(result);
+        }
+
+        static ValueType EvalExtras(ValueType value) {
+            while (true) {
+                switch (value.Scanner.Current.Type) {
+                    case TokenType.DOT:
+                        value = EvalMemberAccess(value);
+                        break;
+                    case TokenType.AS:
+                        value = EvalAs(value);
+                        break;
+                    case TokenType.OPEN_PARENTESES:
+                        value = EvalInvocation(value, value.Token);
+                        break;
+                    case TokenType.OPEN_ARRAY:
+                        value = EvalIndexer(value, value.Token);
+                        break;
+                    default:
+                        return value;
+                }
+            }
+        }
+
+        static ValueType EvalMemberAccess(ValueType value) {
+            var ma = new MemberAccess {
+                Left = value,
+                Token = value.Scanner.Current,
+            };
+            ma.SetParent(value.Parent);
+            value.SetParent(ma);
+            value.Scanner.Scan();
+            var token = value.Scanner.Current;
+            if (token.Type != TokenType.NAME) {
+                value.Program.AddError(token, Error.ExpectingName);
+                return value;
+            }
+            if (value.Scanner.Peek() == '(') {
+                value.Scanner.Scan();
+                ma.Right = EvalInvocation(value, token);
+            } else if (value.Scanner.Peek() == '[') {
+                value.Scanner.Scan();
+                ma.Right = EvalIndexer(value, token);
+            } else {
+                ma.Right = EvalName(ma);
+            }
+            return ma;
+        }
+
+        static ValueType EvalParameterList<T>(ValueType value, Func<ValueType, ValueType> func, Token token, params TokenType[] types) where T : Callable, new() {
+        again:
+            value = func?.Invoke(value) ?? value;
+            if (types.Contains(value.Scanner.Current.Type)) {
+                var ret = new T();
+                ret.Token = token;
+                ret.From = value;
+                ret.SetParent(value.Parent);
+                ret.Parse();
+                value = ret;
+                if (func != null) {
+                    goto again;
+                }
+            }
+            return value;
+        }
+
+        static ValueType EvalIndexer(ValueType parent, Token token) {
+            return EvalParameterList<Array>(parent, null, token, TokenType.OPEN_ARRAY);
+        }
+
+        static ValueType EvalInvocation(ValueType parent, Token token) {
+            return EvalParameterList<Caller>(parent, null, token, TokenType.OPEN_PARENTESES);
+        }
+
+        static ValueType EvalAs(ValueType parent) {
+            var token = parent.Scanner.Test();
+            if (token.Type != TokenType.NAME) {
                 parent.Program.AddError(Error.ExpectingName, parent);
-                return left;
+                return parent;
             }
             var a = new As();
-            a.SetParent(parent);
-            a.Left = left;
-            //parent.Scanner.Scan();
-            //a.Right = ParseExpression(a, PrecedenceLevel.Assignment);
+            a.Token = token;
+            a.SetParent(parent.Parent);
+            a.Left = parent;
             a.Declared = new DeclaredType();
             a.Declared.SetParent(a);
             a.Declared.Parse();
+            parent.Scanner.Scan();
             return a;
         }
 
-        internal static AST ParseParenteses(AST parent) {
-            var parenteses = new Parenteses();
-            parenteses.SetParent(parent);
-            parenteses.Scanner.Scan();
-            parenteses.Expression = ParseExpression(parenteses, PrecedenceLevel.Assignment);
-            if (parent.Scanner.Expect(')') == false) {
+        private static ValueType ParseOthers(ValueType parent, ValueType value) {
+            switch (parent.Scanner.Current.Type) {
+                case TokenType.INCREMENT:
+                case TokenType.DECREMENT:
+                    var unary = parent.Scanner.Current;
+                    parent.Scanner.Scan();
+                    var un = new Unary() { Token = unary, Right = value };
+                    un.SetParent(parent);
+                    return un;
+                case TokenType.AS:
+                    //return ParseAs(parent, value);
+                    break;
+                case TokenType.DOT:
+                    while (parent.Scanner.Current.Type == TokenType.DOT) {
+                        parent.Scanner.Scan();
 
+                        var ma = new MemberAccess();
+                        ma.SetParent(parent);
+                        value.SetParent(ma);
+                        ma.Left = value;
+                        ma.Right = EvalExpression(parent);
+                        if (ma.Right == parent) {
+                            parent.Program.AddError(parent.Scanner.Current, Error.InvalidExpression);
+                            return parent;
+                        }
+                        ma.Right.SetParent(ma);
+                        value = ma;
+                    }
+                    break;
+                case TokenType.OPEN_ARRAY:
+                    while (parent.Scanner.Current.Type == TokenType.OPEN_ARRAY) {
+                        var op = parent.Scanner.Current;
+                        parent.Scanner.Scan();
+                        var right = EvalExpression(parent);
+                        if (parent.Scanner.Current.Type != TokenType.CLOSE_ARRAY) {
+                            parent.Program.AddError(parent.Scanner.Current, Error.ExpectingEndOfArray);
+                            return value;
+                        }
+                        parent.Scanner.Scan();
+                        value = new Indexer() { Token = op, Left = value, Right = right };
+                        value.SetParent(parent);
+                    }
+                    break;
             }
-            return parenteses;
-        }
-        internal static AST ParseUnary(AST parent) {
-            var bin = new Unary() {
-                Token = parent.Scanner.Current,
-                AtRight = false,
-            };
-            bin.SetParent(parent);
-            bin.Scanner.Scan();
-            bin.Right = ParseExpression(bin, PrecedenceLevel.Assignment);
-            bin.Right?.SetParent(bin);
-            return bin;
-        }
-        internal static AST ParseUnary(AST parent, AST Left) {
-            var bin = new Unary(Left) {
-                Token = parent.Scanner.Current,
-                AtRight = true,
-            };
-            bin.SetParent(parent);
-            bin.Right.SetParent(bin);
-            return bin;
-        }
-        internal static AST ParseBang(AST parent) {
-            throw new NotImplementedException();
-        }
-        internal static AST ParseLiteral(AST parent) {
-            var lit = new Literal() { Token = parent.Scanner.Current };
-            lit.SetParent(parent);
-            return lit;
+            return value;
         }
 
-        internal static AST ParseKeyword(AST parent, Token token) {
+        static ValueType ParseAs(ValueType parent) {
+            if (parent.Scanner.Current.Type != TokenType.AS) {
+                return parent;
+            }
+            if (parent.Scanner.Test().Type != TokenType.NAME) {
+                parent.Program.AddError(Error.ExpectingName, parent);
+                return parent;
+            }
+            var a = new As();
+            a.SetParent(parent);
+            a.Left = parent;
+            a.Declared = new DeclaredType();
+            a.Declared.SetParent(a);
+            a.Declared.Parse();
+            parent.Scanner.Scan();
+            return a;
+        }
+
+        static ValueType EvalPrimary(ValueType parent) {
+            switch (parent.Scanner.Current.Type) {
+                case TokenType.NAME:
+                    return EvalName(parent);
+                case TokenType.QUOTE:
+                case TokenType.NUMBER:
+                case TokenType.REAL:
+                case TokenType.CHAR:
+                    var lit = new Literal() { Token = parent.Scanner.Current };
+                    lit.SetParent(parent);
+                    parent.Scanner.Scan();
+                    return lit;
+                case TokenType.OPEN_PARENTESES:
+                    parent.Scanner.Scan();
+                    return EvalParenteses(parent);
+                default:
+                    return parent;
+            }
+        }
+
+        static ValueType EvalName(ValueType parent) {
+            var token = parent.Scanner.Current;
+            if (EvalKeyword(parent, token) is ValueType ret) {
+                return ret;
+            }
+            //if (parent.Scanner.Expect('(')) {
+            //    var call = new CallerV2();
+            //    call.Token = token;
+            //    call.From = parent;
+            //    call.SetParent(parent.Parent);
+            //    parent.SetParent(call);
+            //    call.Parse();
+            //    return call;
+            //}
+            //if (parent.Scanner.Expect('[')) {
+            //    var array = new ArrayV2();
+            //    array.SetParent(parent);
+            //    array.Token = token;
+            //    if (parent.Scanner.Expect(']') == false) {
+            //        array.Parse();
+            //    }
+            //    return array;
+            //}
+            if (token.Value == "this") ;
+            var id = new Identifier() { Token = token };
+            id.SetParent(parent);
+            parent.Scanner.Scan();
+            return id;
+        }
+
+        static ValueType EvalKeyword(ValueType parent, Token token) {
             switch (token.Value) {
-                //case "length" when parent is MemberAccess:
-                //    var len = new Length();
-                //    len.SetParent(parent);
-                //    return len;
+                case "as":
+                    break;
                 case "base":
                     var b = new Base();
                     b.SetParent(parent);
@@ -198,6 +434,7 @@ namespace Run {
                     token.Type = TokenType.BOOL;
                     var tr = new Literal() { Token = token, };
                     tr.SetParent(parent);
+                    parent.Scanner.Scan();
                     return tr;
                 case "scope":
                     var s = new Scope();
@@ -207,25 +444,28 @@ namespace Run {
                 case "new":
                     var n = new New();
                     n.Token = token;
+                    if (token.Line == 58) ;
                     n.SetParent(parent);
                     n.Parse();
                     return n;
                 case "this":
-                    var cls = Current.FindParent<Class>();
+                    var cls = parent.FindParent<Class>();
                     if (cls == null) {
-                        Current.Program.AddError(token, Error.UnknownName);
+                        parent.Program.AddError(token, Error.UnknownName);
                         return null;
                     }
                     var t = new This();
                     t.Token = token;
                     t.Type = cls;
                     t.SetParent(parent);
+                    parent.Scanner.Scan();
                     return t;
                 case "null":
                     var nu = new Null {
                         Token = token,
                     };
                     nu.SetParent(parent);
+                    parent.Scanner.Scan();
                     return nu;
                 case "typeof":
                     var ty = new TypeOf();
@@ -235,419 +475,43 @@ namespace Run {
             }
             return null;
         }
-        internal static AST ParseIdentifier(AST parent) {
-            var token = parent.Scanner.Current;
-            if (ParseKeyword(parent, token) is AST ret) return ret;
-            if (ParseParentesesOrBrackets(parent, token) is AST parsed) return parsed;
 
-            var id = new Identifier() { Token = token };
-            id.Token = token;
-            id.SetParent(parent);
-            return id;
-        }
-        internal static AST ParseParentesesOrBrackets(AST parent, Token token, AST left = null) {
-            if (parent.Scanner.Expect('(')) {
-                var caller = ParseParameters<Caller>(parent, left, TokenType.CLOSE_PARENTESES, token);
-                if (parent.Scanner.Expect('(')) {
-                    parent.Program.AddError(parent.Scanner.Current, Error.InvalidExpression);
-                }
-                return caller;
-            }
-            if (parent.Scanner.Expect('[')) {
-                var array = ParseParameters<Array>(parent, left, TokenType.CLOSE_ARRAY, token);
-                if (parent.Scanner.Expect('[')) {
-                    parent.Program.AddError(parent.Scanner.Current, Error.DoubleArrayNotSupported);
-                }
-                return array;
-            }
-            return null;
-        }
+        //public void Parse() {
+        //    Scanner.Scan();
+        //    var result = ParseExpression(this, PrecedenceLevel.Assignment);
+        //    if (Scanner.Current.Type != TokenType.EOF) {
+        //        //Module.AddError(scanner, "Expecting EOF");
+        //    }
+        //    //return result;
+        //}
 
-        internal static AST ParseTernary(AST parent, AST left) {
-            var ternary = new Ternary(left);
-            ternary.SetParent(parent);
-            ternary.Parse();
-            return ternary;
-        }
+        //ValueType ParseExpression(AST parent, PrecedenceLevel precedence) {
+        //    var result = EvalAssign(parent);
+        //    while (precedence < Scanner.Current.Precedence) {
+        //        var op = Scanner.Current;
+        //        Scanner.Scan();
+        //        var right = ParseExpression(parent, op.Precedence);
+        //        result = new Binary() { Token = op, Left = result, Right = right };
+        //    }
+        //    return result;
+        //}
 
-        internal static AST ParseComparation(AST parent, AST left) => ParseBinary<Comparation>(parent, left);
-
-        internal static AST ParseAssign(AST parent, AST left) => ParseBinary<Assign>(parent, left);
-        internal static AST ParseBinary(AST parent, AST left) => ParseBinary<Binary>(parent, left);
-        internal static AST ParseDot(AST parent, AST left) => ParseMember(parent, left);
-
-        internal static MemberAccess ParseMember(AST parent, AST left) {
-            var access = new MemberAccess() {
-                This = left,
-                Token = parent.Scanner.Current,
-            };
-            access.SetParent(parent);
-            access.This.SetParent(access);
-            parent.Scanner.Scan();
-            access.Member = ParseExpression(access, PrecedenceLevel.Postfix);
-            if (access.Member == null) {
+        static ValueType EvalParenteses(ValueType parent) {
+            var ret = EvalExpression(parent);
+            if (parent.Scanner.Current.Type != TokenType.CLOSE_PARENTESES) {
+                parent.Program.AddError(parent.Scanner.Current, Error.ExpectingCloseParenteses);
                 return null;
             }
-            access.Member.SetParent(access);
-            access.End = access.Scanner.Position;
-            return access;
-        }
-        internal static T ParseBinary<T>(AST parent, AST left) where T : Binary, new() {
-            var level = PeekPrecedence(parent.Scanner.Current.Type);
-            var bin = new T() {
-                Left = left,
-                Token = parent.Scanner.Current,
-            };
-            bin.SetParent(parent);
-            bin.Left.SetParent(bin);
-            parent.Scanner.Scan();
-            bin.Right = ParseExpression(bin, level);
-            if (bin.Right == null) {
-                return null;
-            }
-            bin.Right.SetParent(bin);
-            bin.End = bin.Scanner.Position;
-            return bin;
-        }
-        internal static AST ParseArray(AST parent, AST left) {
-            var ret = ParseParameters<Array>(parent, left, TokenType.CLOSE_ARRAY, left.Token);
-            return ret;
-        }
-        internal static AST ParseCall(AST parent, AST left) => ParseParameters<Caller>(parent, left, TokenType.CLOSE_PARENTESES);
-        internal static T ParseParameters<T>(AST parent, AST left, TokenType end, Token token = null) where T : Caller, new() {
-            var caller = new T() { From = left, Token = token, Values = new(0), };
-            caller.SetParent(parent);
-            parent.Scanner.Scan();
-            while (true) {
-                var p = ParseExpression(caller, PrecedenceLevel.Assignment);
-                if (p == null) {
-                    break;
-                }
-                p.Level = caller.Level + 2;
-                caller.Values.Add(p);
-                parent.Scanner.Scan();
-                if (parent.Scanner.Current.Type != TokenType.COMMA || parent.Scanner.Current.Type == end) {
-                    break;
-                }
-                parent.Scanner.Scan();
-            }
-            caller.End = parent.Scanner.Position;
-            if (parent.Scanner.Peek() == '.') {
-
-            }
-            return caller;
-        }
-        internal static AST ParseExpression(AST ast, PrecedenceLevel level, bool useAditionals = false) {
-            Func<AST, AST> prefix = null;
-            if (useAditionals && AditionalsPrefixes.TryGetValue(ast.Scanner.Current.Type, out var aditional)) {
-                prefix = aditional;
-            } else if (Prefixes.TryGetValue(ast.Scanner.Current.Type, out var p)) {
-                prefix = p;
-            }
-            if (prefix == null) {
-                return null;
-            }
-            AST left = prefix(ast);
-            if (left == null) {
-                return null;
-            }
-            while (true) {
-                var peek = ast.Scanner.Test();
-                var levelPeek = PeekPrecedence(peek.Type);
-                if (level > levelPeek) {
-                    break;
-                }
-                if (Sufixes.TryGetValue(peek.Type, out var sufix) == false) {
-                    break;
-                }
-                ast.Scanner.Scan();
-                left = sufix(ast, left);
-                if (left == null) {
-                    break;
-                }
-            }
-            return left;
-        }
-
-        public void Parse(bool useAditionals) {
-            Scanner.Scan();
-            Current = this;
-            Result = ParseExpression(this, PrecedenceLevel.Assignment, useAditionals);
-            if (Result == null) {
-                this.Program.AddError(Scanner.Current, Error.InvalidExpression);
-                HasError = true;
-            }
-            Current = null;
-        }
-        public override void Parse() => Parse(false);
-        public override void Print() {
-            base.Print();
-            if (Result != null) {
-                Result.Level = Level + 1;
-                Result.Print();
-            }
-        }
-
-        public override void Save(TextWriter writer, Builder builder) => Save(Result, writer, builder);
-        void Save(AST ast, TextWriter writer, Builder builder) {
-            switch (ast) {
-                case Literal lit: writer.Write(lit.Token.Value); break;
-                default: ast.Save(writer, builder); break;
-            }
-        }
-        static PrecedenceLevel PeekPrecedence(TokenType type) {
-            if (Precedences.TryGetValue(type, out var level)) {
-                return level;
-            }
-            return PrecedenceLevel.Assignment;
-        }
-
-        public void Replace(string initial, string other) {
-            Replace(Result, initial, other);
-        }
-
-        void Replace(AST ast, string initial, string other) {
-            if (ast.Token != null && ast.Token.Value == initial) {
-                ast.Token.Value = other;
-            }
-            switch (ast) {
-                case New n:
-                    //n.Expression_.Replace(initial, other);
-                    break;
-                case Parenteses p:
-                    Replace(p.Expression, initial, other);
-                    break;
-                case Binary bin:
-                    Replace(bin.Left, initial, other);
-                    Replace(bin.Right, initial, other);
-                    break;
-                case Caller call:
-                    foreach (var param in call.Values) {
-                        Replace(param, initial, other);
-                    }
-                    break;
-            }
-        }
-    }
-    public class This : ValueType {
-
-        public override void Save(TextWriter writer, Builder builder) {
-            writer.Write("this");
-        }
-    }
-    public class Indexer : Binary {
-
-    }
-    public class Literal : ValueType {
-        public override string ToString() {
-            return base.ToString() + " " + Token.Value;
-        }
-    }
-    public class Ternary : ValueType {
-        public AST Condition;
-        public ExpressionV2 IsTrue, IsFalse;
-
-        public Ternary(AST condition) {
-            Condition = condition;
-        }
-
-        public override void Parse() {
-            Condition.SetParent(this);
-            IsTrue = new ExpressionV2();
-            IsTrue.SetParent(this);
-            IsTrue.Parse();
-            if (Scanner.Current.Type != TokenType.DECLARE) {
-                Program.AddError(Error.ExpectingAssign, this);
-                return;
-            }
-            IsFalse = new ExpressionV2();
-            IsFalse.SetParent(this);
-            IsFalse.Parse();
-        }
-
-        public override void Save(TextWriter writer, Builder builder) {
-            Condition.Save(writer, builder);
-            writer.Write("?");
-            IsTrue.Save(writer, builder);
-            writer.Write(':');
-            IsFalse.Save(writer, builder);
-        }
-    }
-    public class Unary : ValueType {
-        public AST Right;
-        public bool AtRight;
-        public Unary(AST right) {
-            Right = right;
-        }
-
-        public Unary() { }
-
-        public override void Save(TextWriter writer, Builder builder) {
-            if (AtRight) {
-                Right.Save(writer, builder);
-                base.Save(writer, builder);
-            } else {
-                base.Save(writer, builder);
-                Right.Save(writer, builder);
-            }
-        }
-
-    }
-    public class MemberAccess : ValueType {
-        public int End;
-        public AST This;
-        public AST Member;
-        public override void Save(TextWriter writer, Builder builder) {
-            switch (Member) {
-                case CallerV2 cv2:
-                    writer.Write(cv2.Real);
-                    writer.Write('(');
-                    if (cv2.Function.Access == AccessType.STATIC) {
-                        cv2.SaveValues(writer, builder, false);
-                    } else {
-                        //if (Parent is MemberAccess) {
-                        //    var buffer = new StringWriter();
-                        //    WriteParentAcess(this, buffer, builder);
-                        //    writer.Write(buffer.ToString());
-                        //    if (This is Identifier id) {
-                        //        id.From = null;
-                        //    }
-                        //}
-                        This.Save(writer, builder);
-                        cv2.SaveValues(writer, builder, true);
-                    }
-                    writer.Write(')');
-                    break;
-                case Array array:
-                    array.Save(writer, builder);
-                    break;
-                case MemberAccess access:
-                    access.Save(writer, builder);
-                    //This.Save(writer, builder);
-                    //writer.Write("->");
-                    //access.Save(writer, builder);
-                    break;
-                case Caller call:
-                    writer.Write(call.Real);
-                    writer.Write('(');
-                    if (call.Function.Access == AccessType.STATIC) {
-                        call.SaveValues(writer, builder, false);
-                    } else {
-                        if (Parent is MemberAccess) {
-                            var buffer = new StringWriter();
-                            WriteParentAcess(this, buffer, builder);
-                            writer.Write(buffer.ToString());
-                            if (This is Identifier id) {
-                                id.From = null;
-                            }
-                        }
-                        This.Save(writer, builder);
-                        call.SaveValues(writer, builder, true);
-                    }
-                    writer.Write(')');
-                    break;
-                case Identifier id:
-                    if (id.From is EnumMember en) {
-                        en.Save(writer, builder);
-                        break;
-                    }
-                    if (Parent is MemberAccess) {
-                        writer.Write(This.Token.Value);
-                    } else {
-                        This.Save(writer, builder);
-                    }
-                    writer.Write("->");
-                    writer.Write(id.Token.Value);
-                    //id.Save(writer, builder);
-                    break;
-                default:
-                    This.Save(writer, builder);
-                    if (Member is not null) {
-                        writer.Write("->");
-                        Member.Save(writer, builder);
-                    }
-                    break;
-            }
-        }
-
-        void WriteParentAcess(AST ast, TextWriter writer, Builder builder) {
-            if (ast.Parent is MemberAccess pa) {
-                WriteParentAcess(pa, writer, builder);
-                pa.This.Save(writer, builder);
-                writer.Write("->");
-            }
-        }
-
-        public override void Print() {
-            base.Print();
-            This.Level = Level + 1;
-            Member.Level = Level + 1;
-            This.Print();
-            Member.Print();
-        }
-
-        public override string ToString() {
-            return This + "." + Member;
-        }
-    }
-    public class Identifier : ValueType {
-        public AST From;
-        public bool Virtual;
-        public override void Save(TextWriter writer, Builder builder) {
-            if (From is Field f) {
-                if (f.Access == AccessType.STATIC) {
-                    writer.Write(f.Real);
-                    return;
-                }
-                writer.Write("this->");
-            } else if (Virtual) {
-                writer.Write("this->");
-            }
-            base.Save(writer, builder);
-        }
-
-        void AddCheck(TextWriter writer, string type, string value, Token token) {
-            writer.Write("CHECK_");
-            writer.Write(type);
-            writer.Write("(");
-            writer.Write(value);
-            writer.Write(", ");
-            writer.Write(token.Line);
-            writer.Write(", \"");
-            writer.Write(token.Scanner.Path);
-            writer.Write("\")->");
-        }
-
-        public override string ToString() {
-            return base.ToString() + " " + Token.Value;
+            var parenteses = new Parenteses();
+            parenteses.SetParent(parent);
+            parenteses.Scanner.Scan();
+            parenteses.Expression = ret;
+            return parenteses;
         }
     }
 
-    public class Scope : ValueType {
-        public override void Parse() {
-            if (GetName(out Token) == false) return;
-            if (Scanner.IsEOL() == false) {
-                Program.AddError(Scanner.Current, Error.ExpectingEndOfLine);
-                Scanner.SkipLine();
-            }
-        }
-
-        public override void Save(TextWriter writer, Builder builder) {
-            writer.Write("SCOPE(");
-            writer.Write(Token.Value);
-            writer.Write(")");
-        }
-    }
     public class Array : Caller {
-
-        public override void Parse() {
-            Values = new(1);
-            var exp = new ExpressionV2();
-            exp.SetParent(this);
-            Scanner.Scan();
-            exp.Parse();
-            Values.Add(exp);
-        }
+        public Array() { End = TokenType.CLOSE_ARRAY; }
 
         public override void Save(TextWriter writer, Builder builder) {
             switch (From) {
@@ -660,38 +524,59 @@ namespace Run {
         }
     }
 
-    public class PropertySetter : Caller {
-        public int Back;
-        public AST This;
-
-        public override void Save(TextWriter writer, Builder builder) {
-            writer.Write(Real);
-            writer.Write('(');
-            if (This != null) {
-                This.Save(writer, builder);
-            }
-            SaveValues(writer, builder, This != null);
-            writer.Write(')');
+    public class Parameters : List<AST> {
+        public Parameters() : base(0) {
         }
     }
-    public class Caller : ValueType {
+
+    public class Callable : ValueType {
         public AST From;
         public Function Function;
-        public List<AST> Values;
-        public int End;
+        public Parameters Parameters = new();
+        public TokenType End = TokenType.CLOSE_PARENTESES;
+
+        public override void Parse() {
+            Parameters = ParseParameters(this, End);
+        }
+
+        public static Parameters ParseParameters(AST parent, TokenType end) {
+            var list = new Parameters();
+            if (parent.Scanner.Test().Type == end) {
+                parent.Scanner.Scan();
+            } else {
+                while (true) {
+                    var p = new Expression();
+                    p.SetParent(parent);
+                    p.Parse();
+                    if (p == null) {
+                        break;
+                    }
+                    p.Level = parent.Level + 2;
+                    list.Add(p);
+                    if (parent.Scanner.Current.Type == end) {
+                        break;
+                    }
+                    if (parent.Scanner.Current.Type != TokenType.COMMA) {
+                        parent.Program.AddError(parent.Scanner.Current, Error.ExpectingCommaOrCloseParenteses);
+                        break;
+                    }
+                }
+            }
+            parent.Scanner.Scan();
+            return list;
+        }
 
         public override void Print() {
             From?.Print();
             base.Print();
-            foreach (var child in Values) {
+            foreach (var child in Parameters) {
                 child.Level = Level + 1;
                 child.Print();
             }
         }
+    }
 
-        public override string ToString() {
-            return base.ToString() + " (" + Real + ")";
-        }
+    public class Caller : Callable {
 
         public override void Save(TextWriter writer, Builder builder) {
             if (Function == null) {
@@ -713,7 +598,7 @@ namespace Run {
             } else if (Parent is MemberAccess access) {
                 // codigo muito estranho
                 if (access.Parent is MemberAccess ma) {
-                    ma.This.Save(writer, builder);
+                    ma.Left.Save(writer, builder);
                     started = true;
                 }
             } else if (From is Property) {
@@ -731,13 +616,13 @@ namespace Run {
             if (Function.IsNative && Function.Native != null && Function.Native.Count > 1 && Function.Parameters != null && Function.Parameters.Children.Count > 0) {
                 var args = Function.Native[1];
                 Parameter param = null;
-                for (int i = 0; i < Function.Parameters.Children.Count || i < Values.Count; i++) {
+                for (int i = 0; i < Function.Parameters.Children.Count || i < Parameters.Count; i++) {
                     if (Function.Parameters.Children.Count > i) {
                         param = Function.Parameters.Children[i] as Parameter;
                     }
-                    if (Function.Parameters.Children.Count > i && Values.Count > i) {
+                    if (Function.Parameters.Children.Count > i && Parameters.Count > i) {
                         if (args.Contains("$" + param.Token.Value)) {
-                            var value = Values[i];
+                            var value = Parameters[i];
                             if (value == null) {
                                 args = args.Replace("$" + param.Token.Value, "0");
                             } else {
@@ -754,8 +639,8 @@ namespace Run {
                                 args = args.Substring(0, args.Length - 1);
                             }
                             break;
-                        } else if (Values.Count > i) {
-                            var value = Values[i] as ValueType;
+                        } else if (Parameters.Count > i) {
+                            var value = Parameters[i] as ValueType;
                             if (Validator.AreCompatible(value.Type, param.Type) == false) {
                                 Function.Program.AddError(value.Token, Error.IncompatibleType);
                                 continue;
@@ -773,12 +658,12 @@ namespace Run {
         }
 
         public void SaveValues(TextWriter writer, Builder builder, bool started) {
-            if (Values != null && Values.Count > 0) {
+            if (Parameters != null && Parameters.Count > 0) {
                 if (started) {
                     writer.Write(", ");
                 }
-                for (int i = 0; i < Values.Count; i++) {
-                    var value = Values[i];
+                for (int i = 0; i < Parameters.Count; i++) {
+                    var value = Parameters[i];
                     if (value == null) continue;
                     if (i > 0) {
                         writer.Write(',');
@@ -787,134 +672,9 @@ namespace Run {
                 }
             }
         }
-    }
-    public class Parenteses : ValueType {
-        public AST Expression;
-        public Parenteses() { }
 
-        public override void Print() {
-            base.Print();
-            if (Expression != null) {
-                Expression.Level = Level + 1;
-                Expression.Print();
-            }
-        }
-
-        public override void Save(TextWriter writer, Builder builder) {
-            writer.Write('(');
-            Expression.Save(writer, builder);
-            writer.Write(')');
-        }
-    }
-    public class Ref : ValueType {
-        public ExpressionV2 Expression;
-        public override void Parse() {
-            var parenteses = Scanner.Expect('(');
-            Expression = new ExpressionV2();
-            Expression.SetParent(this);
-            Expression.Parse();
-            if (parenteses && Scanner.Expect(')') == false) {
-                Program.AddError(Token, Error.ExpectingCloseParenteses);
-            }
-        }
-
-        public override void Save(TextWriter writer, Builder builder) {
-            if (Expression.Type.IsPrimitive) {
-                writer.Write("&(");
-            } else
-            if (Expression.Type.IsNumber) {
-                writer.Write("&(");
-            } else {
-                writer.Write("*(");
-            }
-            Expression.Save(writer, builder);
-            writer.Write(')');
-        }
-    }
-    public class SizeOf : ValueType {
-        //public Class Of;
-        public ExpressionV2 Expression;
-        public override void Parse() {
-            var parenteses = Scanner.Expect('(');
-            Expression = new ExpressionV2();
-            Expression.SetParent(this);
-            Expression.Parse();
-            if (parenteses && Scanner.Expect(')') == false) {
-                Program.AddError(Token, Error.ExpectingCloseParenteses);
-            }
-        }
-
-        public override void Save(TextWriter writer, Builder builder) {
-            if (Expression.Result is Identifier id) {
-                if (id.From is Var p && p.Arrays != null) {
-                    writer.Write("SIZEOF(");
-                    writer.Write(id.Token.Value);
-                    writer.Write(")");
-                    return;
-                } else if (id.Type != null) {
-                    writer.Write("sizeof(");
-                    writer.Write(id.Type.Real);
-                    writer.Write(')');
-                    return;
-                }
-            } else if (Expression.Result is This) {
-                writer.Write("SIZEOF(this)");
-                return;
-            }
-            writer.Write("sizeof(");
-            Expression.Save(writer, builder);
-            writer.Write(')');
-        }
-    }
-    public class Condition : ValueType { }
-    public class Step : ValueType { }
-    public class Cast : ValueType {
-        public ExpressionV2 Expression;
-        public int Arrays { get; private set; }
-        public override void Parse() {
-            if (Scanner.Expect('(') == false) {
-                Program.AddError(Scanner.Current, Error.ExpectingOpenParenteses);
-                Scanner.SkipLine();
-                return;
-            }
-            if (GetName(out Token) == false) {
-                Scanner.SkipLine();
-                return;
-            }
-            if (Scanner.Expect('[')) {
-                if (Scanner.Expect(']') == false) {
-                    Program.AddError(Scanner.Current, Error.ExpectingEndOfArray);
-                    Scanner.SkipLine();
-                    return;
-                }
-                Arrays++;
-            }
-            if (Scanner.Expect(',') == false) {
-                Program.AddError(Scanner.Current, Error.ExpectingCommaOrCloseParenteses);
-                Scanner.SkipLine();
-                return;
-            }
-            Expression = new ExpressionV2();
-            Expression.SetParent(this);
-            Expression.Parse();
-            if (Scanner.Expect(')') == false) {
-                Program.AddError(Scanner.Current, Error.ExpectingCloseParenteses);
-                Scanner.SkipLine();
-                return;
-            }
-        }
-
-        public override void Save(TextWriter writer, Builder builder) {
-            if (Type == null) return;
-            writer.Write("CAST(");
-            writer.Write(Type.Real);
-            if (Type.IsPrimitive == false) {
-                writer.Write('*');
-            }
-            for (int i = 0; i < Arrays; i++) writer.Write("*");
-            writer.Write(", ");
-            Expression.Save(writer, builder);
-            writer.Write(')');
+        public override string ToString() {
+            return base.ToString() + " (" + Real + ")";
         }
     }
 }

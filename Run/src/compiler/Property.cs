@@ -42,6 +42,7 @@ namespace Run {
                     Scanner.Scan();
                     return;
                 case TokenType.EOL:
+                    Program.Lines++;
                     Scanner.Scan();
                     goto again;
                 case TokenType.EOF:
@@ -139,7 +140,7 @@ namespace Run {
         void FinishGetter(Function func, bool simple) {
             var ret = func.Add<Return>();
             if (simple) {
-                ret.Expression = new ExpressionV2();
+                ret.Expression = new Expression();
                 ret.Expression.SetParent(ret);
                 var id = new Identifier {
                     Virtual = true,
@@ -154,7 +155,7 @@ namespace Run {
         }
 
         void FinishSetter(Function func, bool simple) {
-            var exp = func.Add<ExpressionV2>();
+            var exp = func.Add<Expression>();
             if (simple) {
                 var bin = new Binary {
                     Type = Type,

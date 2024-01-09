@@ -26,16 +26,20 @@ namespace Run {
                 if (token == null) return;
                 switch (token.Type) {
                     case TokenType.CLOSE_BLOCK: return;
-                    case TokenType.EOL: continue;
+                    case TokenType.EOL: 
+                        Program.Lines++;
+                        continue;
                     case TokenType.AT: ParseAnnotation(); continue;
-                    case TokenType.COMMENT: Scanner.SkipLine(); continue;
+                    case TokenType.COMMENT: 
+                        Scanner.SkipLine(); 
+                        continue;
                     case TokenType.NAME: ParseName(token); break;
                     //case TokenType.INCREMENT:
                     //case TokenType.DECREMENT:
                     //case TokenType.OPEN_PARENTESES:
                     default:
                         Scanner.RollBack();
-                        Add<ExpressionV2>().Parse();
+                        Add<Expression>().Parse();
                         break;
                         //Program.AddError(token, Error.InvalidExpression);
                         //break;
@@ -134,7 +138,7 @@ namespace Run {
                 return;
             }
             Scanner.RollBack();
-            Add<ExpressionV2>().Parse();
+            Add<Expression>().Parse();
         }
 
         public override void Print() {
@@ -156,7 +160,7 @@ namespace Run {
                 var child = block.Children[i];
                 if (child is Parameter) continue;
                 child.Save(writer, builder);
-                writer.Write(child is ExpressionV2 ? ";\n" : "");
+                writer.Write(child is Expression ? ";\n" : "");
                 writer.Write(child is Var ? ";\n" : "");
             }
             if (block.Defers.Count > 0) {

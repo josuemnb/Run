@@ -6,14 +6,19 @@ namespace Run {
     public static class Keywords {
 
         internal static void ParseThis(Block parent) {
-            parent.Scanner.RollBack();
             if (parent is Class) {
+                parent.Scanner.RollBack();
                 var ctor = parent.Add<Constructor>();
                 ctor.Type = parent as Class;
                 ctor.Parse();
                 return;
             }
-            parent.Add<ExpressionV2>().Parse();
+            if (parent.FindParent<Function>() is Function func && func.Access == AccessType.STATIC) {
+                parent.Program.AddError(Error.InvalidAccessFunctionStatic);
+                return;
+            }
+            parent.Scanner.RollBack();
+            parent.Add<Expression>().Parse();
         }
 
         internal static void ParseDefer(Block parent) {

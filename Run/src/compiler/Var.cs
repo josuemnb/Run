@@ -6,9 +6,9 @@ namespace Run {
     public class Field : Var {
     }
     public class Var : ValueType {
-        public List<ExpressionV2> Arrays;
+        public List<Expression> Arrays;
         bool Caller = false;
-        public ExpressionV2 Initializer;
+        public Expression Initializer;
         public int Usage = 0;
 
         public override void Parse() {
@@ -21,14 +21,16 @@ namespace Run {
             if (Scanner.Expect(':')) {
                 GetReturnType();
             }
+            bool eol;
             if (Scanner.Expect('=')) {
                 ParseInitializer();
-                if (Scanner.Current.Type != TokenType.EOL && Scanner.Current.Type != TokenType.SEMICOLON) {
+                if ((eol = (Scanner.Current.Type == TokenType.EOL)) == false && Scanner.Current.Type != TokenType.SEMICOLON) {
                     Program.AddError(Scanner.Current, Error.ExpectingEndOfLine);
                 }
-            } else if (Scanner.IsEOL() == false && Scanner.Expect(';') == false) {
+            } else if ((eol = Scanner.IsEOL()) == false && Scanner.Expect(';') == false) {
                 Program.AddError(Scanner.Current, Error.ExpectingEndOfLine);
             }
+            Program.Lines += eol ? 1 : 0;
         }
 
         public void ParseInitializer() {
@@ -71,7 +73,7 @@ namespace Run {
                 return;
             }
         again:
-            var exp = new ExpressionV2();
+            var exp = new Expression();
             exp.SetParent(this);
             exp.Parse();
             Arrays.Add(exp);

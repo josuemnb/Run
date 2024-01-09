@@ -23,19 +23,18 @@
                 case Caller cl: Count(cl); break;
                 case New n: Count(n); break;
                 case Return r: Count(r); break;
-                case ExpressionV2 e: Count(e); break;
+                case Expression e: Count(e); break;
                 //case ExpressionV2 e2: Count(e2); break;
+                //case MemberAccess ma: Count(ma); break;
                 case Binary b: Count(b); break;
                 case Unary u: Count(u); break;
                 case Ternary t: Count(t); break;
                 case Identifier id: Count(id); break;
-                case MemberAccess ma: Count(ma); break;
                 case Parenteses pa: Count(pa); break;
                 case TypeOf to: Count(to); break;
                 case SizeOf so: Count(so); break;
                 case Scope scope: Count(scope); break;
                 case Cast cast: Count(cast); break;
-                case CallerV2 cv2: Count(cv2); break;
             }
         }
 
@@ -53,18 +52,9 @@
         void Count(Caller c) {
             Count(c.From);
             Count(c.Function);
-            if (c.Values != null) {
-                for (int i = 0; i < c.Values.Count; i++) {
-                    Count(c.Values[i]);
-                }
-            }
-        }
-        void Count(CallerV2 c) {
-            Count(c.From);
-            Count(c.Function);
-            if (c.Values != null) {
-                for (int i = 0; i < c.Values.Count; i++) {
-                    Count(c.Values[i]);
+            if (c.Parameters != null) {
+                for (int i = 0; i < c.Parameters.Count; i++) {
+                    Count(c.Parameters[i]);
                 }
             }
         }
@@ -109,8 +99,8 @@
         }
 
         void Count(MemberAccess ma) {
-            Count(ma.This);
-            Count(ma.Member);
+            Count(ma.Left);
+            Count(ma.Right);
         }
 
         void Count(If i) {
@@ -125,7 +115,7 @@
             Count(f as Block);
         }
 
-        void Count(ExpressionV2 e) {
+        void Count(Expression e) {
             if (e == null) return;
             Count(e.Result);
         }
@@ -140,7 +130,7 @@
             if (v.Type is Class c) {
                 Count(c);
             }
-            if (v.Initializer is ExpressionV2 e) {
+            if (v.Initializer is Expression e) {
                 Count(e);
             }
         }

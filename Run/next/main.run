@@ -1,9 +1,7 @@
-type test { 
-	func t:i32 => 0
-	func child:test => new test()
+type t {
+	func d4:i32 => 0
 }
 
 main {
-	var i = new i32[10]
-	var t = new test().child().t()	
+	var d = new t().d4()
 }

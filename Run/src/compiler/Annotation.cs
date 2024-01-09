@@ -4,14 +4,15 @@ using System.IO;
 namespace Run {
     public class Annotation : AST {
         public bool IsHeader => Token.Value == "header";
+        public bool IsReplace => Token.Value == "replace";
         public string Value;
         public override void Parse() {
             if (GetName(out Token) == false) return;
             IsNative = Token.Value == "native";
             if (Scanner.Expect('(')) {
                 Value = Scanner.Until(Environment.NewLine)?.Value.Trim();
-                if (Value.EndsWith(")")) {
-                    Value = Value.Substring(0, Value.Length - 1);
+                if (Value.EndsWith(')')) {
+                    Value = Value[..^1];
                 }
                 Scanner.Scan();
             }

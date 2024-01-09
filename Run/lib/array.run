@@ -36,7 +36,7 @@ type arrayI32: array {
 	func resize() {
 		if size < capacity => return
 		capacity *=2
-		items = realloc(items as pointer, capacity * sizeof(i32))
+		items = realloc(items as pointer, capacity * sizeof(i32)) as i32[]
 	}
 
 	func dispose() {

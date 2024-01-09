@@ -2,11 +2,11 @@
 
 namespace Run {
     public class Return : AST {
-        public ExpressionV2 Expression;
+        public Expression Expression;
 
         public override void Parse() {
             if (Scanner.IsEOL()) return;
-            Expression = new ExpressionV2();
+            Expression = new Expression();
             Expression.SetParent(this);
             Expression.Parse();
         }

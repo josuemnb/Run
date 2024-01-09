@@ -115,6 +115,11 @@ namespace Run {
         internal void ParseArrow() {
             IsArrow = true;
             base.ParseBlock(true);
+            if (Scanner.Current.Type != TokenType.EOL ) {
+                Program.AddError(Scanner.Current, Error.ExpectingEndOfLine);
+            } else {
+                Program.Lines++;
+            }
         }
 
         public override AST FindChildren(string name) {

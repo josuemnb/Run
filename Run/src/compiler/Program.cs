@@ -10,6 +10,7 @@ namespace Run {
         public Builder Builder;
         public Validator Validator;
         public Replacer Replacer;
+        public int Lines { get; internal set; } = 1;
 
         internal List<string> searchDirectories = new(0);
         public HashSet<string> Libraries = new HashSet<string>(0);

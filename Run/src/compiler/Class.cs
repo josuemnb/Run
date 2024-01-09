@@ -32,7 +32,7 @@ namespace Run {
             //if (Scanner.Expect('<')) {
             //    Generics = ParseGenerics(this);
             //}
-            Caller = Expression_.ParseParentesesOrBrackets(this, Tokens?.Count > 0 ? Tokens[Tokens.Count - 1] : Token);
+            //Caller = Expression_.ParseParentesesOrBrackets(this, Tokens?.Count > 0 ? Tokens[Tokens.Count - 1] : Token);
         }
     }
 

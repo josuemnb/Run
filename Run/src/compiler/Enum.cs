@@ -2,7 +2,7 @@
 
 namespace Run {
     public class EnumMember : ValueType {
-        public ExpressionV2 Expression;
+        public Expression Expression;
         public override void Save(TextWriter writer, Builder builder) {
             writer.Write(Parent.Token.Value);
             writer.Write('_');
@@ -27,15 +27,20 @@ namespace Run {
                 if (token == null) return;
                 switch (token.Type) {
                     case TokenType.CLOSE_BLOCK: return;
-                    case TokenType.EOL: break;
-                    case TokenType.COMMENT: Scanner.SkipLine(); break;
+                    case TokenType.EOL:
+                        Program.Lines++;
+                        break;
+                    case TokenType.COMMENT:
+                        Scanner.SkipLine();
+                        Program.Lines++;
+                        break;
                     case TokenType.NAME:
                         var bin = new EnumMember() {
                             Token = token,
                         };
                         Add(bin);
                         if (Scanner.Expect('=')) {
-                            bin.Expression = new ExpressionV2();
+                            bin.Expression = new Expression();
                             bin.Expression.SetParent(bin);
                             bin.Expression.Parse();
                         }
