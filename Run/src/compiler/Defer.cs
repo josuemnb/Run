@@ -2,7 +2,7 @@
 
 namespace Run {
     public class Defer : Block {
-        Expression ExpressionV2;
+        Expression Expression;
         internal int ID;
         public override void Parse() {
             Token = new Token {
@@ -14,8 +14,7 @@ namespace Run {
             if (Scanner.Expect('{')) {
                 base.Parse();
             } else {
-                ExpressionV2 = Add<Expression>();
-                ExpressionV2.Parse();
+                Expression = Expression.ParseExpression(this);
             }
         }
 

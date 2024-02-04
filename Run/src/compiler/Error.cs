@@ -13,6 +13,7 @@
         public static readonly string ExpectingComma = "Expecting ,";
         public static readonly string ExpectingCloseParenteses = "Expecting )";
         public static readonly string ExpectingBeginOfBlock = "Expecting Begin of Block";
+        public static readonly string ExpectingBeginOfArray = "Expecting Begin of Array";
         public static readonly string ExpectingEndOfArray = "Expecting End of Array";
         public static readonly string ExpectingEndOfLine = "Expecting End of Line";
         public static readonly string ExpectingName = "Expecting a name";
@@ -31,14 +32,16 @@
         public static readonly string UnknownType = "Unknown type";
         public static readonly string UndefinedType = "Undefined type";
 
-        public static readonly string AnnotationsNotAllowedInsideFunctionScope = "Annotation not allowed inside function scope";
-        public static readonly string InvalidAccessDefinition = "Invalid Access Definition. Not Allowed in Modules";
-        public static readonly string IncompatibleAccessClassStatic = "Invalid Access Definition. Parent Class is Static";
-        public static readonly string InvalidAccessFunctionStatic = "Invalid Access Definition. Function is Static";
-        public static readonly string BadFormatted = "Bad Formatted";
-        public static readonly string InvalidExpression = "Invalid Expression";
-        public static readonly string DoubleArrayNotSupported = "Double Array ExpressionV2 Not Supported";
         public static readonly string IncompatibleType = "Incompatible Types";
+        public static readonly string IncompatibleAccessClassStatic = "Invalid Access Definition. Parent Class is Static";
+
+        public static readonly string InvalidAccessDefinition = "Invalid Access Definition. Not Allowed in Modules";
+        public static readonly string InvalidAccessFunctionStatic = "Invalid Access Definition. Function is Static";
+        public static readonly string InvalidExpression = "Invalid Expression";
+
+        public static readonly string AnnotationsNotAllowedInsideFunctionScope = "Annotation not allowed inside function scope";
+        public static readonly string BadFormatted = "Bad Formatted";
+        public static readonly string DoubleArrayNotSupported = "Double Array ExpressionV2 Not Supported";
         public static readonly string NameAlreadyExists = "Name already exists";
         public static readonly string TokenAnnotationAlreadyExists = "Token annotation already exists";
         public static readonly string VariadicParameterAlreadyDefined = "No more parameters after variadic parameter definition";
@@ -65,6 +68,7 @@
         public static readonly string InterfaceMemberHasDifferentParameters = "Interface member has different parameters";
         public static readonly string InterfaceNotImplementedCorrect = "Interface not implemented correct";
         public static readonly string UnknownTokenType = "Unknown token type";
+        public static readonly string ExpectingBaseOrThis = "Expecting base or this";
 
         public override string ToString() {
             if (Token == null || Token.Value == null) {

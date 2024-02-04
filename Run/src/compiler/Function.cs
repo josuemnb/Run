@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 
@@ -37,8 +38,62 @@ namespace Run {
         }
     }
     public class Constructor : Function {
+        public bool IsDefault;
         public override string ToString() {
             return "Constructor: " + Type;
+        }
+
+        public bool BaseCall, ThisCall;
+        public List<Expression> ExtraCall;
+
+        public override void Parse() {
+            SetAccess();
+            if (Scanner.Expect('(') && Scanner.Expect(')') == false) {
+                ParseParameters();
+            }
+            if (Scanner.Expect(':')) {
+                switch (Scanner.Test().Value) {
+                    case "base": ParseBase(); break;
+                    case "this": ParseThis(); break;
+                    default: Program.AddError(Scanner.Current, Error.ExpectingBaseOrThis); break;
+                }
+            }
+            if (Scanner.Expect("=>")) {
+                ParseArrow();
+                return;
+            }
+            base.ParseBlock();
+        }
+
+        private void ParseThis() {
+            ThisCall = true;
+            ParseExtraParameters();
+        }
+
+        public override void Save(TextWriter writer, Builder builder) {
+            base.Save(writer, builder);
+        }
+
+        private void ParseBase() {
+            BaseCall = true;
+            ParseExtraParameters();
+        }
+
+        void ParseExtraParameters() {
+            Scanner.Scan();
+            ExtraCall = new(0);
+            if (Scanner.Expect('(') && Scanner.Expect(')') == false) {
+            again:
+                //var exp = new Expression(this);
+                //exp.Parse();
+                ExtraCall.Add(Expression.ParseExpression(this));
+                if (Scanner.Expect(',')) {
+                    goto again;
+                }
+                if (Scanner.Expect(')') == false) {
+                    Program.AddError(Scanner.Current, Error.ExpectingCommaOrCloseParenteses);
+                }
+            }
         }
     }
 
@@ -52,7 +107,7 @@ namespace Run {
         public bool TypeArray;
         public bool HasInterface;
         public bool HasVariadic;
-        public int Usage = 0;
+        public int Usage = 1;
         public bool IsAutoFree { get; internal set; }
 
         public override void Parse() {
@@ -101,21 +156,21 @@ namespace Run {
             ParseBlock();
         }
 
-        private void ValidateGenerics() {
-            //var cls = Parent as Class;
-            //if (cls == null || cls.HasGenerics == false) return;
-            //for (int i = 0; i < Generics.Count; i++) {
-            //    var gen = Generics[i];
-            //    if (cls.Generics.Find(g => g.Token.Value == gen.Token.Value) is Generic generic) {
-            //        Program.AddError(gen.Token, Error.GenericNameAlreadyClassDefined);
-            //    }
-            //}
-        }
+        //static void ValidateGenerics() {
+        //var cls = Parent as Class;
+        //if (cls == null || cls.HasGenerics == false) return;
+        //for (int i = 0; i < Generics.Count; i++) {
+        //    var gen = Generics[i];
+        //    if (cls.Generics.Find(g => g.Token.Value == gen.Token.Value) is Generic generic) {
+        //        Program.AddError(gen.Token, Error.GenericNameAlreadyClassDefined);
+        //    }
+        //}
+        //}
 
         internal void ParseArrow() {
             IsArrow = true;
             base.ParseBlock(true);
-            if (Scanner.Current.Type != TokenType.EOL ) {
+            if (Scanner.IsEOL() == false) {
                 Program.AddError(Scanner.Current, Error.ExpectingEndOfLine);
             } else {
                 Program.Lines++;
@@ -127,7 +182,7 @@ namespace Run {
                 return a;
             }
             if (Parameters != null) {
-                foreach (Parameter p in Parameters.Children) {
+                foreach (var p in Parameters.Children) {
                     if (p.Token.Value == name) {
                         return p;
                     }
@@ -163,7 +218,6 @@ namespace Run {
         }
 
         protected void ParseParameters() {
-            var cls = FindParent<Class>();
             Parameters = Add<Block>();
         again:
             if (HasVariadic) {
@@ -237,49 +291,49 @@ namespace Run {
             return cls;
         }
 
-        void GetConstraints(Parameter param) {
-            param.Constraints = new List<AST>();
-        again:
-            if (GetName(out Token name) == false) {
-                return;
-            }
-            if (Scanner.Expect('(')) {
-                var interf = new Interface() {
-                    Token = name,
-                };
-                interf.SetParent(param);
-                param.Constraints.Add(interf);
-                if (Scanner.Expect(')')) goto finish;
-                loop:
-                if (GetName(out Token type) == false) {
-                    return;
-                }
-                interf.Add<Identifier>().Token = type;
-                if (Scanner.Expect(')')) {
-                    goto finish;
-                }
-                if (Scanner.Expect(',') == false) {
-                    Program.AddError(Error.ExpectingCommaOrCloseParenteses, param);
-                    return;
-                }
-                goto loop;
-            } else {
-                var id = new Identifier {
-                    Token = name,
-                };
-                id.SetParent(param);
-                param.Constraints.Add(id);
-            }
-        finish:
-            if (Scanner.Expect(')')) {
-                return;
-            }
-            if (Scanner.Expect(',') == false) {
-                Program.AddError(Error.ExpectingCommaOrCloseParenteses, param);
-                return;
-            }
-            goto again;
-        }
+        //void GetConstraints(Parameter param) {
+        //    param.Constraints = new List<AST>();
+        //again:
+        //    if (GetName(out Token name) == false) {
+        //        return;
+        //    }
+        //    if (Scanner.Expect('(')) {
+        //        var interf = new Interface() {
+        //            Token = name,
+        //        };
+        //        interf.SetParent(param);
+        //        param.Constraints.Add(interf);
+        //        if (Scanner.Expect(')')) goto finish;
+        //        loop:
+        //        if (GetName(out Token type) == false) {
+        //            return;
+        //        }
+        //        interf.Add<IdentifierExpression>().Token = type;
+        //        if (Scanner.Expect(')')) {
+        //            goto finish;
+        //        }
+        //        if (Scanner.Expect(',') == false) {
+        //            Program.AddError(type, Error.ExpectingCommaOrCloseParenteses);
+        //            return;
+        //        }
+        //        goto loop;
+        //    } else {
+        //        var id = new IdentifierExpression(this) {
+        //            Token = name,
+        //        };
+        //        id.SetParent(param);
+        //        param.Constraints.Add(id);
+        //    }
+        //finish:
+        //    if (Scanner.Expect(')')) {
+        //        return;
+        //    }
+        //    if (Scanner.Expect(',') == false) {
+        //        Program.AddError(name, Error.ExpectingCommaOrCloseParenteses);
+        //        return;
+        //    }
+        //    goto again;
+        //}
 
         public override void Print() {
             Print(this);
@@ -352,7 +406,7 @@ namespace Run {
                 if (cls.IsBased) {
                     bool found = false;
                     if (Parameters != null && Parameters.Children.Count > 0) {
-                        foreach (var c in cls.Find<Constructor>()) {
+                        foreach (var c in cls.FindChildren<Constructor>()) {
                             if (c.Parameters != null && c.Parameters.Children.Count == Parameters.Children.Count) {
                                 found = true;
                                 break;
@@ -365,17 +419,7 @@ namespace Run {
                     }
                 }
             }
-            if (Parameters != null) {
-                foreach (Parameter param in Parameters.Children) {
-                    if (param.IsMember) {
-                        writer.Write("this->");
-                        writer.Write(param.Token.Value);
-                        writer.Write(" = ");
-                        writer.Write(param.Token.Value);
-                        writer.WriteLine(";");
-                    }
-                }
-            }
+            SaveParametersMembers(writer);
             if (IsArrow && ((Children.Count > 0 && (Parameters == null || Parameters.Children.Count == 0)) || (Children.Count > 1 && (Parameters != null && Parameters.Children.Count > 0)))) {
                 if (Type != null) {
                     writer.Write("return ");
@@ -404,6 +448,19 @@ namespace Run {
                 writer.WriteLine(";");
             }
             writer.WriteLine("}\n");
+        }
+
+        private void SaveParametersMembers(TextWriter writer) {
+            if (Parameters == null) return;
+            foreach (var child in Parameters.Children) {
+                if (child is Parameter param && param.IsMember) {
+                    writer.Write("this->");
+                    writer.Write(param.Token.Value);
+                    writer.Write(" = ");
+                    writer.Write(param.Token.Value);
+                    writer.WriteLine(";");
+                }
+            }
         }
 
         public override string ToString() {

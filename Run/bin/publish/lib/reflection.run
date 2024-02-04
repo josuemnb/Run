@@ -1,0 +1,19 @@
+// VERY IMPORTANT
+// DO NOT CHANGE THIS FILE
+
+@native(ReflectionArgument)
+type ReflectionArgument { }
+
+@native(ReflectionMember)
+type ReflectionMember { }
+
+@native(ReflectionType)
+type ReflectionType { 
+	var name:string
+
+	@native
+	func getMember(name:string):ReflectionMember
+
+	@native
+	func getFunction(name:string):pointer
+}

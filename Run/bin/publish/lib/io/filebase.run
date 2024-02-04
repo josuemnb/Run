@@ -1,0 +1,65 @@
+// VERY IMPORTANT
+// DO NOT CHANGE THIS FILE
+
+using "../io"
+
+@native(fopen($path,$mode))
+@header(stdio.h)
+func fopen(path:string,mode:string) :FILE
+
+@native(fclose($fp):i32)
+@header(stdio.h)
+func fclose(fp:FILE) :i32
+
+@native(fseek($fp,$offset,$from):i32)
+@header(stdio.h)
+func fseek(fp:FILE,offset:i32,from:i32):i32
+
+@native(ftell($fp):i32)
+@header(stdio.h)
+func ftell(fp:FILE):i32
+
+@native(fgets($buffer,$size,$fp))
+@header(stdio.h)
+func fgets(buffer:pointer,size:i32,fp:FILE):pointer
+
+@native(fflush($fp):i32)
+@header(stdio.h)
+func fflush(fp:FILE):i32
+
+@native(DIR)
+@header(dirent.h)
+type DIR {}
+
+@native(struct dirent)
+@header(dirent.h)
+type dirent { 
+	var d_ino:i64
+	var d_reclen:u16
+	var d_namlen:u16
+	var d_name:string
+}
+
+type FileBase {
+	var fp:FILE
+	var path:string
+	var opened:bool
+	var ended:i32
+
+	property position:i32 {
+		get => ftell(fp)
+		set => fseek(fp,value,0)
+	}
+
+	property ok:bool => opened && ended != 2
+
+	func close {
+		if opened == false => return
+		opened = false
+		fclose(fp)
+	}
+
+	func begin => if ok => fseek(fp,0,0)
+
+	func end =>if ok => fseek(fp,0,2)
+}

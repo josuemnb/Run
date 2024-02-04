@@ -9,16 +9,17 @@ namespace Run {
         public int Index = 0;
         public bool SameType = true;
         public override void Parse() {
-            if (Scanner.Expect("=>")) {
+            if (Scanner.Current.Type == TokenType.ARROW) {
                 if (Scanner.Test().Value == "return") {
                     Scanner.Scan();
                     Add<Return>().Parse();
                     return;
                 }
-                Add<Expression>().Parse();
+                //Add<Expression>().Parse();
+                Add(Expression.ParseExpression(this));
                 return;
             }
-            if (Scanner.Expect('{') == false) {
+            if (Scanner.Current.Type != TokenType.OPEN_BLOCK) {
                 Program.AddError(Scanner.Current, Error.ExpectingBeginOfBlock);
                 return;
             }
@@ -37,7 +38,7 @@ namespace Run {
         }
     }
     public class Case : Default {
-        internal List<Expression> Expressions = new List<Expression>(0);
+        internal List<Expression> Expressions = new(0);
         public int Count = 0;
         public override void Parse() {
             Token = Scanner.Test();
@@ -48,11 +49,9 @@ namespace Run {
                 }
             }
         again:
-            var exp = new Expression();
-            exp.SetParent(this);
-            exp.Parse();
-            Expressions.Add(exp);
-            if (Scanner.Expect(',')) {
+            Expressions.Add(Expression.ParseExpression(this));
+            Scanner.Scan();
+            if (Scanner.Current.Type == TokenType.COMMA) {
                 goto again;
             }
             base.Parse();
@@ -76,7 +75,7 @@ namespace Run {
                         writer.Write(" || ");
                     }
                     writer.Write("(");
-                    if (exp.Result is Unary) {
+                    if (exp is UnaryExpression) {
                     } else {
                         writer.Write(" == ");
                     }
@@ -96,10 +95,8 @@ namespace Run {
         public Class Type;
         public bool SameType = true;
         public override void Parse() {
-            Expression = new Expression();
-            Expression.SetParent(this);
-            Expression.Parse();
-            if (Expression.Result == null) {
+            Expression = Expression.ParseExpression(this);
+            if (Expression == null) {
                 Program.AddError(Scanner.Current, Error.InvalidExpression);
                 return;
             }
@@ -125,6 +122,7 @@ namespace Run {
                             case "default":
                                 var d = Add<Default>();
                                 d.Index = index++;
+                                Scanner.Scan();
                                 d.Parse();
                                 break;
                             default:

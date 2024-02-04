@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 
 namespace Run {
@@ -40,11 +41,23 @@ namespace Run {
         public Class Type;
         public Annotation Annotation;
     }
+
+    public class Null : Class {
+        public Null() {
+            IsNative = true;
+            IsPrimitive = true;
+            Token = new Token {
+                Value = "NULL",
+            };
+        }
+    }
     public class Class : Block {
         public static int CounterID = 1;
         public int ID;
-        public int Usage = 0;
+        public int Usage = 1;
         public bool IsTemporary;
+        public bool IsEnum;
+        public bool HasOperators;
         public List<Interface> Interfaces;
 
         public bool HasInterfaces => Interfaces != null && Interfaces.Count > 0;
@@ -97,6 +110,18 @@ namespace Run {
             }
         }
 
+        public IEnumerable<T> FindMembers<T>(string name) where T : AST {
+            var temp = Token.Value + "_" + name;
+            foreach (var v in Children) {
+                if (v is T t && (t.Token.Value == name || t.Real == name || t.Real == temp)) yield return t;
+            }
+            if (Base != null) {
+                foreach (var v in Base.FindMembers<T>(name)) {
+                    yield return v;
+                }
+            }
+        }
+
         public T FindMember<T>(string name) where T : AST {
             var temp = Token.Value + "_" + name;
             foreach (var v in Children) {
@@ -107,7 +132,7 @@ namespace Run {
 
         private void ParseNames() {
             if (GetName(out Token) == false) return;
-            Real = Token.Value;
+            //Real = "_" + Token.Value;
             if (Annotations != null) {
                 if (Annotations.Find(a => a.IsNative) is Annotation a) {
                     Real = a.Value;
@@ -131,7 +156,7 @@ namespace Run {
                 if (Interfaces.Exists(i => i.Token.Value == inter.Value)) {
                     Program.AddError(inter, Error.NameAlreadyExists);
                 } else {
-                    Interface @interface = new Interface { Token = inter, };
+                    Interface @interface = new() { Token = inter, };
                     Interfaces.Add(@interface);
                     //if (Scanner.Expect('<')) {
                     //    @interface.Generics = ParseGenerics(@interface);

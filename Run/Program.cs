@@ -5,9 +5,9 @@ namespace Run {
     class Run {
         static void Main() {
             var start = Stopwatch.StartNew();
-            var program = new Program("next/main");
+            var program = new Program("next/program");
             program.Parse();
-            program.Build();
+            program.Build(true);
             //program.Print();
             program.Validate();
             program.Transpile();

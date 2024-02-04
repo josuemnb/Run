@@ -1,0 +1,56 @@
+type Error {
+	var message: string
+	var code: string
+	var path: string
+
+	static var ExpectedPublicAcces = "Expected Public Access"
+    static var ExpectedStaticAcess = "Expected Static Access"
+    static var ExpectingArrowOfBeginOfBlock = "Expecting '=>' or '{'"
+    static var ExpectingOpenParenteses = "Expecting ("
+    static var ExpectingCommaOrCloseParenteses = "Expecting , or )"
+    static var ExpectingComma = "Expecting ,"
+    static var ExpectingCloseParenteses = "Expecting )"
+    static var ExpectingBeginOfBlock = "Expecting Begin of Block"
+    static var ExpectingEndOfArray = "Expecting End of Array"
+    static var ExpectingEndOfLine = "Expecting End of Line"
+    static var ExpectingName = "Expecting a name"
+    static var ExpectingMember = "Expecting a member"
+    static var ExpectingValue = "Expecting a Value"
+    static var ExpectingCase = "Expecting a 'case'"
+    static var ExpectingDeclare = "Expecting :"
+    static var ExpectingAssign = "Expecting ="
+    static var ExpetingBlock = "Expecting a Block"
+    static var ExpectingQuote = "Expecting a Quote"
+
+    static var UnknownFunctionNameOrWrongParamaters = "Unknown function name or wrong paramaters"
+    static var UnknownName = "Unknown name"
+    static var UnknownClassMember = "Unknown class member"
+    static var UnknownType = "Unknown type"
+    static var UndefinedType = "Undefined type"
+
+    static var AnnotationsNotAllowedInsideFunctionScope = "Annotation not allowed inside function scope"
+    static var InvalidAccessDefinition = "Invalid Access Definition. Not Allowed in Modules"
+    static var IncompatibleAccessClassStatic = "Invalid Access Definition. Parent Class is Static"
+    static var BadFormatted = "Bad Formatted"
+    static var InvalidExpression = "Invalid ExpressionV2"
+    static var DoubleArrayNotSupported = "Double Array ExpressionV2 Not Supported"
+    static var IncompatibleType = "Incompatible Types"
+    static var NameAlreadyExists = "Name already exists"
+    static var VariadicParameterAlreadyDefined = "No more parameters after variadic parameter definition"
+    static var TypeIsNotArrayDefined = "Type is not @array defined"
+    static var BaseMustBeInsideClass = "Base must be inside of class function member"
+    static var ClassDoesntHasBaseClass = "Class doesn't have a base class definition"
+
+    static var OnlyOneParameterAllowedInOperator = "Only One Parameter Allowed in Operator Definition"
+    static var OnlyInClassScope = "Only Allowed inside of Class Scope"
+    static var OnlyInClassOrModuleScope = "Only Allowed inside of Class or Module Scope"
+    static var OnlyInModuleScope = "Only Allowed inside of Module Scope"
+    static var OnlyInFunctionScope = "Only Allowed Inside of Function Scope"
+    static var OnlyInFunctionBlock = "Only Allowed Inside of Block"
+    static var NativeClassNotAllowed = "Member not allowed in native class"
+    static var ScopeOnlyOfConstructorNoParameters = "Scope only accepts constructor with no parameters"
+
+    static func pathNotFound(path: string): string {
+        return "Path not founded: '" + path + "'"
+    }
+}

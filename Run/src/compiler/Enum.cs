@@ -1,27 +1,46 @@
-﻿using System.IO;
+﻿using System;
+using System.IO;
 
 namespace Run {
-    public class EnumMember : ValueType {
-        public Expression Expression;
+    public class EnumMember : ContentExpression {
         public override void Save(TextWriter writer, Builder builder) {
             writer.Write(Parent.Token.Value);
             writer.Write('_');
             writer.Write(Token.Value);
         }
+
+        public void SaveDeclaration(TextWriter writer, Builder builder) {
+            var parent = Parent as Enum;
+            writer.Write(parent.Real);
+            if (Type.IsPrimitive == false) {
+                writer.Write('*');
+            }
+            writer.Write(' ');
+            Save(writer, builder);
+            writer.Write(" = ");
+            if (Content != null) {
+                if (Content is LiteralExpression literal && Type == builder.String) {
+                    writer.Write(literal.Token.Value);
+                } else {
+                    Content.Save(writer, builder);
+                }
+            } else {
+                writer.Write(parent.Children.IndexOf(this));
+            }
+            writer.WriteLine(";");
+        }
     }
-    public class Enum : Block {
-        public Class Type;
-        public int Usage;
+    public class Enum : Class {
+        public Enum() {
+            IsEnum = true;
+        }
         public override void Parse() {
             if (GetName(out Token) == false) return;
+            Real = Token.Value;
             if (Scanner.Expect('{') == false) {
                 Program.AddError(Scanner.Current, Error.ExpectingBeginOfBlock);
                 return;
             }
-            Type = new Class {
-                Token = Token,
-                Scanner = Scanner,
-            };
             while (true) {
                 var token = Scanner.Scan();
                 if (token == null) return;
@@ -35,14 +54,12 @@ namespace Run {
                         Program.Lines++;
                         break;
                     case TokenType.NAME:
-                        var bin = new EnumMember() {
+                        var member = new EnumMember() {
                             Token = token,
                         };
-                        Add(bin);
+                        Add(member);
                         if (Scanner.Expect('=')) {
-                            bin.Expression = new Expression();
-                            bin.Expression.SetParent(bin);
-                            bin.Expression.Parse();
+                            member.Parse();
                         }
                         break;
                     default:

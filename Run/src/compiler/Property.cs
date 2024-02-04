@@ -24,7 +24,8 @@ namespace Run {
             }
             if (GetName(out Token type) == false) return;
             Type = new Class {
-                Token = type
+                Token = type,
+                IsTemporary = true,
             };
             switch (Scanner.Test().Value) {
                 case "=": Scanner.Scan(); ParseInitializer(); break;
@@ -140,24 +141,19 @@ namespace Run {
         void FinishGetter(Function func, bool simple) {
             var ret = func.Add<Return>();
             if (simple) {
-                ret.Expression = new Expression();
-                ret.Expression.SetParent(ret);
-                var id = new Identifier {
+                ret.Expression = new IdentifierExpression(ret) {
                     Virtual = true,
                     Token = Token,
                     Type = Type,
                 };
-                id.SetParent(ret.Expression);
-                ret.Expression.Result = id;
                 return;
             }
             ret.Parse();
         }
 
         void FinishSetter(Function func, bool simple) {
-            var exp = func.Add<Expression>();
             if (simple) {
-                var bin = new Binary {
+                func.Add(new BinaryExpression(func) {
                     Type = Type,
                     Token = new Token {
                         Value = "=",
@@ -165,12 +161,12 @@ namespace Run {
                         Type = TokenType.ASSIGN,
                         Family = TokenType.ARITMETIC,
                     },
-                    Left = new Identifier {
+                    Left = new IdentifierExpression(func) {
                         Virtual = true,
                         Token = Token,
                         Type = Type,
                     },
-                    Right = new Identifier {
+                    Right = new IdentifierExpression(func) {
                         Token = new Token {
                             Value = "value",
                             Scanner = Scanner,
@@ -178,15 +174,13 @@ namespace Run {
                         },
                         Type = Type,
                     },
-                };
-                bin.SetParent(exp);
-                bin.Left.SetParent(bin);
-                bin.Right.SetParent(bin);
-                exp.Result = bin;
+                });
+                //exp.Result = bin;
                 return;
             }
-            exp.Parse();
-            return;
+            //var exp = func.Add<Expression>();
+            //exp.Parse();
+            func.Add(Expression.ParseExpression(func));
         }
 
         public override void Save(TextWriter writer, Builder builder) {

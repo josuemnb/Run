@@ -9,7 +9,7 @@ namespace Run {
         public List<Expression> Arrays;
         bool Caller = false;
         public Expression Initializer;
-        public int Usage = 0;
+        public int Usage = 1;
 
         public override void Parse() {
             SetAccess();
@@ -18,15 +18,19 @@ namespace Run {
             }
             GetAnnotations();
             if (GetName(out Token) == false) return;
+            //Real = "_" + Token.Value;
             if (Scanner.Expect(':')) {
                 GetReturnType();
             }
             bool eol;
             if (Scanner.Expect('=')) {
                 ParseInitializer();
-                if ((eol = (Scanner.Current.Type == TokenType.EOL)) == false && Scanner.Current.Type != TokenType.SEMICOLON) {
+                if ((eol = Scanner.IsEOL()) == false && Scanner.Expect(';') == false) {
                     Program.AddError(Scanner.Current, Error.ExpectingEndOfLine);
                 }
+                //if ((eol = (Scanner.Current.Type == TokenType.EOL)) == false && Scanner.Current.Type != TokenType.SEMICOLON) {
+                //    Program.AddError(Scanner.Current, Error.ExpectingEndOfLine);
+                //}
             } else if ((eol = Scanner.IsEOL()) == false && Scanner.Expect(';') == false) {
                 Program.AddError(Scanner.Current, Error.ExpectingEndOfLine);
             }
@@ -34,9 +38,7 @@ namespace Run {
         }
 
         public void ParseInitializer() {
-            Initializer = new();
-            Initializer.SetParent(this);
-            Initializer.Parse();
+            Initializer = Expression.ParseExpression(this);
         }
 
         public void GetReturnType() {
@@ -73,10 +75,7 @@ namespace Run {
                 return;
             }
         again:
-            var exp = new Expression();
-            exp.SetParent(this);
-            exp.Parse();
-            Arrays.Add(exp);
+            Arrays.Add(Expression.ParseExpression(this));
             if (Scanner.Expect(',')) {
                 goto again;
             }
@@ -114,15 +113,28 @@ namespace Run {
                     Error.NullType(this);
                     return;
                 }
+                //if (Type.IsEnum) {
+                //    writer.Write(Type.Base.Real ?? Type.Base.Token.Value);
+                //} else {
                 writer.Write(Type.Real ?? Type.Token.Value);
+                //}
                 writer.Write(' ');
+                switch (Initializer) {
+                    case NewExpression ne:
+                        array = ne.Content is ArrayCreationExpression;
+                        if (array) writer.Write("*");
+                        break;
+                        //case NewExpression n:
+                        //    writer.Write("*");
+                        //    array = n.IsArray;
+                        //    break;
+                        //case AsExpression cast when cast.Arrays > 0: writer.Write("*"); break;
+                }
+                //if (Type.IsEnum && Type.Base.IsPrimitive == false) {
+                //    writer.Write('*');
+                //} else 
                 if (Type.IsPrimitive == false) {
                     writer.Write('*');
-                } else if (Initializer != null) {
-                    switch (Initializer.Result) {
-                        case New: writer.Write("*"); break;
-                        case Cast cast when cast.Arrays > 0: writer.Write("*"); break;
-                    }
                 }
                 if (Arrays != null && Caller == false) {
                     array = false;

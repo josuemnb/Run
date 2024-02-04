@@ -7,7 +7,7 @@ namespace Run {
 
         internal static void ParseThis(Block parent) {
             if (parent is Class) {
-                parent.Scanner.RollBack();
+                //parent.Scanner.RollBack();
                 var ctor = parent.Add<Constructor>();
                 ctor.Type = parent as Class;
                 ctor.Parse();
@@ -18,7 +18,8 @@ namespace Run {
                 return;
             }
             parent.Scanner.RollBack();
-            parent.Add<Expression>().Parse();
+            //parent.Add<Expression>().Parse();
+            parent.Add(Expression.ParseExpression(parent));
         }
 
         internal static void ParseDefer(Block parent) {
@@ -98,6 +99,7 @@ namespace Run {
                 case "break": CheckAndParse<Break>(parent, () => parent.FindParent<For>() != null); break;
                 case "defer": ParseDefer(parent); break;
                 case "label": CheckAndParse<Label>(parent, () => parent.FindParent<Function>() != null); break;
+                case "delete": CheckAndParse<Delete>(parent, () => parent.FindParent<Function>() != null); break;
                 case "using": CheckAndParse<Using>(parent, () => parent is Module); break;
                 case "return": CheckAndParse<Return>(parent, () => parent.FindParent<Function>() is Function); break;
                 case "static": AST.CurrentAccess = AccessType.STATIC; break;

@@ -56,16 +56,13 @@ namespace Run {
         public Expression Condition;
 
         public override void Parse() {
-            Condition = new Expression();
-            Condition.SetParent(this);
-            Condition.Parse();
-            //if (Scanner.Expect("=>")) {
-            if (Scanner.Current.Type == TokenType.ARROW) {
+            Token = Scanner.Current;
+            Condition = Expression.ParseExpression(this);
+            if (Scanner.Expect("=>")) {
                 ParseBlock(true);
                 return;
             }
-            //if (Scanner.Expect('{') == false) {
-            if (Scanner.Current.Type != TokenType.OPEN_BLOCK) {
+            if (Scanner.Expect('{') == false) {
                 Program.AddError(Scanner.Current, Error.ExpectingBeginOfBlock);
                 return;
             }
@@ -98,12 +95,12 @@ namespace Run {
     }
     public class For : Block {
         public AST Start;
+        //public Var Var;
         public Expression Condition;
         public Expression Step;
         int Stage = -1;
 
         public override void Parse() {
-            if (Scanner.Current.Line == 13) ;
         again:
             if (Scanner.Expect("=>")) {
                 goto once;
@@ -119,34 +116,47 @@ namespace Run {
             AST current = null;
             switch (Stage) {
                 case 0:
-                    var peek = Scanner.Test();
-                    if (peek.Value == "var") {
-                        Scanner.Scan();
+                    if (Scanner.Expect("var")) {
                         current = Start = new Var();
+                        current.SetParent(this);
+                        current.Parse();
                     } else {
-                        current = Start = new Expression();
+                        //current = Start = new Expression(this);
+                        current = Start = Expression.ParseExpression(this);
+                        if (current is Iterator) {
+                            goto beginOfBlock;
+                        }
                     }
                     break;
                 case 1:
-                    current = Condition = new Expression();
+                    //current = Condition = new Expression(this);
+                    current = Condition = Expression.ParseExpression(this);
                     break;
                 case 2:
-                    current = Step = new Expression();
+                    //current = Step = new Expression(this);
+                    current = Step = Expression.ParseExpression(this);
                     break;
             }
-            current?.SetParent(this);
-            current?.Parse();
-            Scanner.RollBack();
+            //current?.Parse();
+            //if (Stage >= 2) {
+
+            //    Program.AddError(Scanner.Current, Error.ExpectingBeginOfBlock);
+            //    return;
+            //}
+            if (Stage < 2 && (Scanner.Expect(';') || Scanner.Current.Type == TokenType.SEMICOLON)) {
+                Stage++;
+                //Scanner.Scan();
+                goto again;
+            }
+            //Scanner.RollBack();
             if (current is Expression exp && exp.HasError) {
                 return;
             }
-            if (Stage < 2) {
-                goto again;
-            }
+        beginOfBlock:
             if (Scanner.Expect("=>")) {
                 goto once;
             }
-            if (Scanner.Expect('{') == false) {
+            if (Scanner.Expect("{") == false) {
                 Program.AddError(Scanner.Current, Error.ExpectingBeginOfBlock);
                 return;
             }
@@ -166,7 +176,7 @@ namespace Run {
                     writer.Write("while(");
                     condition.Save(writer, builder);
                     break;
-                case 0 when Start is Var var:
+                case 0 when Start is Var var && Condition == null:
                     writer.Write("for(");
                     var.Save(writer, builder);
                     writer.Write(";;");
@@ -214,7 +224,7 @@ namespace Run {
                 Scanner.SkipLine();
                 return;
             }
-            Block.Add<Identifier>().Token = name;
+            Block.Add<IdentifierExpression>().Token = name;
             if (Scanner.Expect(',')) {
                 goto again;
             }
@@ -230,7 +240,7 @@ namespace Run {
         public override void Save(TextWriter writer, Builder builder) {
             for (int i = 0; i < Block.Children.Count; i++) {
                 var child = Block.Children[i];
-                if (child is Identifier id && id.Type is Class cls && cls.Dispose != null) {
+                if (child is IdentifierExpression id && id.Type is Class cls && cls.Dispose != null) {
                     writer.Write(cls.Dispose.Real);
                     writer.Write("(");
                     writer.Write(id.Token.Value);
@@ -240,19 +250,9 @@ namespace Run {
                 child.Save(writer, builder);
                 writer.Write(")");
                 if (i < Block.Children.Count - 1) {
-                    writer.WriteLine(';');
                 }
+                writer.WriteLine(';');
             }
-        }
-    }
-
-    public class Null : ValueType {
-        public Null() {
-            IsNull = true;
-        }
-
-        public override void Save(TextWriter writer, Builder builder) {
-            writer.Write("NULL");
         }
     }
 }

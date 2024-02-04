@@ -7,10 +7,11 @@ namespace Run {
         static internal int DeferCounter = 0;
         public List<AST> Children = new(0);
         public List<Defer> Defers = new(0);
-        internal bool Validated;
+        internal bool Replaced;
         public T Add<T>() where T : AST, new() => Add(new T());
 
         public T Add<T>(T item) where T : AST {
+            if (item == null) return null;
             item.SetParent(this);
             Children.Add(item);
             return item;
@@ -26,12 +27,12 @@ namespace Run {
                 if (token == null) return;
                 switch (token.Type) {
                     case TokenType.CLOSE_BLOCK: return;
-                    case TokenType.EOL: 
+                    case TokenType.EOL:
                         Program.Lines++;
                         continue;
                     case TokenType.AT: ParseAnnotation(); continue;
-                    case TokenType.COMMENT: 
-                        Scanner.SkipLine(); 
+                    case TokenType.COMMENT:
+                        Scanner.SkipLine();
                         continue;
                     case TokenType.NAME: ParseName(token); break;
                     //case TokenType.INCREMENT:
@@ -39,7 +40,8 @@ namespace Run {
                     //case TokenType.OPEN_PARENTESES:
                     default:
                         Scanner.RollBack();
-                        Add<Expression>().Parse();
+                        //Add<Expression>().Parse();
+                        Add(Expression.ParseExpression(this));
                         break;
                         //Program.AddError(token, Error.InvalidExpression);
                         //break;
@@ -57,12 +59,13 @@ namespace Run {
             Add<Annotation>().Parse();
         }
 
-        public IEnumerable<T> Find<T>() where T : AST {
+        public IEnumerable<T> FindChildren<T>() where T : AST {
+            //if (this is T t1) yield return t1;
             for (int i = 0; i < Children.Count; i++) {
                 var child = Children[i];
                 if (child is T t) yield return t;
                 if (child is Block block) {
-                    foreach (var r in block.Find<T>()) {
+                    foreach (var r in block.FindChildren<T>()) {
                         yield return r;
                     }
                 }
@@ -106,12 +109,12 @@ namespace Run {
             return base.FindName(name);
         }
 
-        AST FindInFunction(AST a, Function f, string name) {
+        static AST FindInFunction(AST a, Function f, string name) {
             if (f.Token.Value == name) return f;
             if (f.Real == name) return f;
             if (a is Module) return null;
             if (f.Parameters != null) {
-                foreach (Parameter p in f.Parameters.Children) {
+                foreach (AST p in f.Parameters.Children) {
                     if (p.Token.Value == name) {
                         return p;
                     }
@@ -138,7 +141,8 @@ namespace Run {
                 return;
             }
             Scanner.RollBack();
-            Add<Expression>().Parse();
+            //Add<Expression>().Parse();
+            Add(Expression.ParseExpression(this));
         }
 
         public override void Print() {
@@ -178,8 +182,7 @@ namespace Run {
                     SaveBlock(defer, writer, builder);
                     writer.WriteLine("}");
                 }
-                var p = block.Parent as Block;
-                if (p != null && p is not Class) {
+                if (block.Parent is Block p && p is not Class) {
                     if (p.Defers.Count > 0) {
                         writer.Write("goto __DEFER__");
                         writer.Write(p.Defers[0].ID);

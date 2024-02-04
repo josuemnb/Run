@@ -16,19 +16,26 @@ namespace Run {
         public Class I8;
         public Class U32;
         public Class Pointer;
+        public Null Null = new() {
+            Token = new Token {
+                Value = "NULL",
+            },
+        };
         public Class Any;
-        public Dictionary<string, Enum> Enums = new(0);
+        //public Dictionary<string, Enum> Enums = new(0);
         public Dictionary<string, Function> Functions = new(0);
 
-        public static Builder Instance;
+        public static Builder Instance { get; private set; }
         public Program Program;
         public Builder(Program program) {
             Program = program;
             Instance = this;
         }
 
-        public void Build() {
-            RegisterBuiltinTypes();
+        public void Build(bool includeBuiltin = true) {
+            if (includeBuiltin) {
+                RegisterBuiltinTypes();
+            }
             if (Program.HasErrors || Program.Errors.Count > 0) {
                 return;
             }
@@ -37,6 +44,7 @@ namespace Run {
             RegisterClasses();
             RegisterClassesArrays();
             RegisterEnums();
+            CorrectVarTemporaryTypes();
             RegisterFunctions();
             ValidateInterfaces();
             if (Program.HasErrors == false) {
@@ -56,23 +64,32 @@ namespace Run {
                     if (Find(cls.ArrayOf.Annotation.Value) is Class type) {
                         cls.ArrayOf.Type = type;
                     } else {
-                        Program.AddError(cls.Token, Error.UnknownType);
+                        Program.AddError(new Token {
+                            Value = cls.ArrayOf.Annotation.Value,
+                            Line = cls.Token.Line,
+                            Scanner = cls.Scanner,
+                        }, Error.UnknownType);
                     }
                 }
             }
         }
 
         private void RegisterEnums() {
-            foreach (var en in Program.Find<Enum>()) {
-                if (Classes.ContainsKey(en.Token.Value)) {
-                    Program.AddError(en.Token, Error.NameAlreadyExists);
-                    continue;
-                }
-                if (Enums.TryAdd(en.Token.Value, en) == false) {
-                    Program.AddError(en.Token, Error.NameAlreadyExists);
-                    continue;
+            foreach (var cls in Classes.Values) {
+                if (cls.IsEnum) {
+
                 }
             }
+            //foreach (var en in Program.Find<Enum>()) {
+            //    if (Classes.ContainsKey(en.Token.Value)) {
+            //        Program.AddError(en.Token, Error.NameAlreadyExists);
+            //        continue;
+            //    }
+            //    if (Enums.TryAdd(en.Token.Value, en) == false) {
+            //        Program.AddError(en.Token, Error.NameAlreadyExists);
+            //        continue;
+            //    }
+            //}
         }
 
         void RegisterBuiltinTypes() {
@@ -80,26 +97,26 @@ namespace Run {
             Program.Add<Using>().LoadModule("builtin");
         }
 
-        public Class Find(string name, out AST from) {
-            from = null;
+        public Class Find(string name/*, out AST from*/) {
+            //from = null;
             if (Classes.TryGetValue(name, out Class cls)) {
                 return cls;
             }
-            if (Enums.TryGetValue(name, out Enum en)) {
-                from = en;
-                return en.Type;
-            }
+            //if (Enums.TryGetValue(name, out Enum en)) {
+            //    from = en;
+            //    return en;
+            //}
             return null;
         }
 
-        public Class Find(string name) => Find(name, out _);
+        //public Class Find(string name) => Find(name, out _);
 
         void RegisterFunctions() {
-            foreach (var func in Program.Find<Function>()) {
+            foreach (var func in Program.FindChildren<Function>()) {
                 RegisterFunction(func);
             }
 
-            foreach (var property in Program.Find<Property>()) {
+            foreach (var property in Program.FindChildren<Property>()) {
                 if (property.SimpleKind != Property.PropertyKind.None) {
                     continue;
                 }
@@ -135,7 +152,7 @@ namespace Run {
                 IsNative = true,
                 IsAny = true,
             });
-            foreach (var cls in Program.Find<Class>()) {
+            foreach (var cls in Program.FindChildren<Class>()) {
                 if (Classes.TryAdd(cls.Token.Value, cls) == false) {
                     Program.AddError(cls.Token, Error.NameAlreadyExists);
                     continue;
@@ -146,8 +163,16 @@ namespace Run {
             }
             foreach (var cls in Classes.Values.ToArray()) {
                 ValidateBased(cls);
-                //if (cls.HasGenerics)
-                //    ValidateGenerics(cls, cls.Generics);
+            }
+        }
+
+        void CorrectVarTemporaryTypes() {
+            foreach (var var in Program.FindChildren<Var>()) {
+                if (var.Type != null && var.Type.IsTemporary) {
+                    if (Classes.TryGetValue(var.Type.Token.Value, out Class cls)) {
+                        var.Type = cls;
+                    }
+                }
             }
         }
 
@@ -166,9 +191,10 @@ namespace Run {
             }
         }
 
-        private void SetDefaultConstructor(Class cls) {
-            if (cls is not Interface && /*cls.IsNative == false && */cls.Children.Any(c => c is Constructor) == false) {
+        private static void SetDefaultConstructor(Class cls) {
+            if (cls.IsEnum == false && cls is not Interface && /*cls.IsNative == false && */cls.Children.Any(c => c is Constructor) == false) {
                 var ctor = cls.Add<Constructor>();
+                ctor.IsDefault = true;
                 ctor.Type = cls;
                 ctor.Real = cls.Token.Value + "_this";
                 ctor.Token = new Token {
@@ -280,6 +306,8 @@ namespace Run {
                 buff.Append(cls.Token.Value).Append('_');
                 //} else if (ast is not Module && ast.FindParent<Module>() is Module m && m != Program) {
                 //    buff.Append(string.IsNullOrEmpty(m.Nick) ? m.Token.Value : m.Nick).Append('_');
+                //} else if (ast is Function) {
+                //    buff.Append("_");
             }
             if (ast is Operator op) {
                 buff.Append("_operator_").Append(op.Token.Type.ToString());
@@ -316,11 +344,6 @@ namespace Run {
                         buff.Append("_variadic");
                     } else {
                         if (p.Type != null) {
-                            if (p.Type.IsTemporary) {
-                                if (Classes.TryGetValue(p.Type.Token.Value, out Class nt)) {
-                                    p.Type = nt;
-                                }
-                            }
                             buff.Append('_').Append(p.Type.Token.Value);
                         }
                     }

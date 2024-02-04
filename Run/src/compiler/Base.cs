@@ -1,8 +1,13 @@
 ﻿namespace Run {
-    internal class Base : ValueType {
+    internal class Base : Expression {
         public Class Owner;
+
+        public Base(AST parent) {
+            SetParent(parent);
+            Parse();
+        }
         public override void Parse() {
-            Token = new Token { Value = "this" };
+            Token = Scanner.Current;
             var cls = FindParent<Class>();
             if (cls == null) {
                 Program.AddError(Scanner.Current, Error.BaseMustBeInsideClass);
@@ -16,11 +21,12 @@
                 Scanner.SkipLine();
                 return;
             }
-            if(cls.IsBased==false) {
+            if (cls.IsBased == false) {
                 Program.AddError(Scanner.Current, Error.ClassDoesntHasBaseClass);
                 Scanner.SkipLine();
                 return;
             }
+            Scanner.Scan();
         }
     }
 }

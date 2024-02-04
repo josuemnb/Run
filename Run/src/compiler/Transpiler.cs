@@ -6,19 +6,17 @@ using System.Linq;
 using System.Reflection;
 
 namespace Run {
-    public class Transpiler {
-        Builder Builder;
-        TextWriter Writer;
+    public class Transpiler(Builder builder) {
+        readonly Builder Builder = builder;
+        private TextWriter Writer;
         string Destination;
-        public Transpiler(Builder builder) {
-            Builder = builder;
-        }
-        public bool Save(string path) {
+
+        public void Save(string path) {
             Destination = path;
             using var stream = new FileStream(path, FileMode.Create);
-            return Save(stream);
+            Save(stream);
         }
-        public bool Save(Stream stream) {
+        public void Save(Stream stream) {
             Writer = new StreamWriter(stream);
             Writer.WriteLine("""
                 #include <malloc.h>
@@ -51,15 +49,14 @@ namespace Run {
                 #define THROW(j,x) longjmp(j, x)
                 """);
             SaveDeclarations();
-            SaveReflection();
+            //SaveReflection();
             SaveChecks();
             SaveImplementations();
             SaveInitializer();
             Writer.Close();
-            return Compile();
         }
 
-        bool Compile() {
+        public bool Compile() {
             Console.Write("  Compiling ...");
             if (Builder.Program.HasMain == false) {
                 Console.WriteLine("...No Main");
@@ -69,10 +66,11 @@ namespace Run {
                 Console.WriteLine(".....Empty");
                 return true;
             }
-            var libraries = Builder.Program.Find<Library>().Select(l => l.Token.Value).Distinct().ToList();
-            var location = Assembly.GetExecutingAssembly().Location;
+            var libraries = Builder.Program.FindChildren<Library>().Select(l => l.Token.Value).Distinct().ToList();
+            //var location = Assembly.GetExecutingAssembly().Location;
+            var location = AppContext.BaseDirectory;
             //TODO improve this code
-            var tcc = Directory.EnumerateFiles(Path.GetDirectoryName(location), "tcc.exe", SearchOption.AllDirectories).FirstOrDefault();
+            var tcc = Directory.EnumerateFiles(location, "tcc.exe", SearchOption.AllDirectories).FirstOrDefault();
             var info = new ProcessStartInfo(tcc) {
                 Arguments = "-I" + Path.GetDirectoryName(location) + "/lib " + (Builder.Program.HasMain ? "-o " : "-c ") + "..\\" + Builder.Program.Token.Value + ".exe " + Destination + " -w " + (libraries.Count > 0 ? " -L" + string.Join(" -L", libraries.Select(Path.GetDirectoryName)) + "\"" + " -l\"" + string.Join(" -l\"", libraries.Select(Path.GetFileName)) : ""),
                 WindowStyle = ProcessWindowStyle.Hidden,
@@ -139,7 +137,7 @@ namespace Run {
                 }
                 if (cls.Usage == 0) continue;
                 Writer.Write("\t&(ReflectionType){\"");
-                Writer.Write(cls.Token.Value);
+                Writer.Write(cls.Real ?? cls.Token.Value);
                 Writer.Write("\", ");
                 var children = cls.Children.Where(c => c.Access != AccessType.STATIC && /*c.HasGenerics == false &&*/ ((c is Var v && v.Usage > 0) || (c is Function f && f.Usage > 0))).ToList();
                 Writer.Write(children.Count);
@@ -165,9 +163,9 @@ namespace Run {
                         Writer.Write("\", ");
                         if (child is Var && child is not Property) {
                             Writer.Write("offsetof(");
-                            Writer.Write(cls.Token.Value);
+                            Writer.Write(cls.Real ?? cls.Token.Value);
                             Writer.Write(", ");
-                            Writer.Write(child.Token.Value);
+                            Writer.Write(child.Real ?? child.Token.Value);
                             Writer.Write("), ");
                         } else {
                             Writer.Write("0, ");
@@ -250,6 +248,7 @@ namespace Run {
                 """);
 
             foreach (var cls in Builder.Classes.Values) {
+                if (cls.IsEnum) continue;
                 if (cls.IsPrimitive || cls.Access == AccessType.STATIC) continue;
                 if (cls.Usage == 0) continue;
                 Writer.Write(cls.Real);
@@ -268,12 +267,13 @@ namespace Run {
         }
         void SaveDeclarations() {
             SaveClassesPrototypes();
+            SaveEnumsPrototypes();
             Writer.WriteLine();
             SaveClassesDeclarations();
-            SaveClassProperties();
             SaveEnumsDeclarations();
+            SaveClassProperties();
             Writer.WriteLine();
-            SaveFunctionsDeclarations();
+            SaveFunctionsPrototypes();
             SaveGlobals();
         }
         void SaveImplementations() {
@@ -291,7 +291,7 @@ namespace Run {
                 "string.h",
                 "stddef.h",
             };
-            var values = Builder.Program.Find<AST>().Where(a => a.Annotations != null);
+            var values = Builder.Program.FindChildren<AST>().Where(a => a.Annotations != null);
             foreach (var ast in values) {
                 ast.Annotations.ForEach(annotation => {
                     if (annotation.IsHeader) {
@@ -306,7 +306,7 @@ namespace Run {
         }
         private void SaveGlobals() {
             SaveGlobals(Builder.Program);
-            foreach (var module in Builder.Program.Find<Module>()) {
+            foreach (var module in Builder.Program.FindChildren<Module>()) {
                 SaveGlobals(module);
             }
             Writer.WriteLine();
@@ -357,7 +357,7 @@ namespace Run {
                 Writer.Write(Builder.Program.Main.Parameters.Children.Count + 1);
                 Writer.WriteLine(") {");
                 Writer.Write("\t\tfprintf(stderr, \"Invalid number of arguments! Expecting:\\n");
-                foreach (Parameter param in Builder.Program.Main.Parameters.Children) {
+                foreach (EnumMember param in Builder.Program.Main.Parameters.Children) {
                     Writer.Write("  ");
                     Writer.Write(param.Token.Value);
                     Writer.Write("=(");
@@ -458,6 +458,7 @@ namespace Run {
         #region classes
         private void SaveClassesInitializers() {
             foreach (var cls in Builder.Classes.Values) {
+                if (cls.IsEnum) continue;
                 if (cls.IsNative || cls.Access == AccessType.STATIC) {
                     continue;
                 }
@@ -472,6 +473,7 @@ namespace Run {
 
             Writer.WriteLine();
             foreach (var cls in Builder.Classes.Values) {
+                if (cls.IsEnum) continue;
                 if (cls.IsNative || cls.Access == AccessType.STATIC) {
                     continue;
                 }
@@ -524,6 +526,7 @@ namespace Run {
         }
         void SaveClassesDeclarations() {
             foreach (var cls in Builder.Classes.Values.OrderBy(e => e.BaseCount)) {
+                if (cls.IsEnum) continue;
                 if (cls.IsNative || cls.Access == AccessType.STATIC) {
                     SaveStaticClassMembers(cls);
                     continue;
@@ -549,7 +552,7 @@ namespace Run {
                                         Writer.Write("*");
                                     }
                                     Writer.Write(" ");
-                                    Writer.Write(property.Token.Value);
+                                    Writer.Write(property.Real ?? property.Token.Value);
                                     Writer.WriteLine(";");
                                 }
                                 continue;
@@ -573,7 +576,8 @@ namespace Run {
 
         private void SaveClassProperties() {
             foreach (var cls in Builder.Classes.Values) {
-                foreach (var property in cls.Find<Property>()) {
+                if (cls.IsEnum) continue;
+                foreach (var property in cls.FindChildren<Property>()) {
                     if (property.Usage == 0) continue;
                     if (property.SimpleKind != Property.PropertyKind.None) {
                         continue;
@@ -592,13 +596,11 @@ namespace Run {
 
         bool SaveClassesPrototypes() {
             bool ok = false;
+            Writer.WriteLine();
             foreach (var cls in Builder.Classes.Values.OrderBy(e => e.BaseCount)) {
-                if (cls.IsNative || cls.Access == AccessType.STATIC) {
-                    continue;
-                }
-                if (cls.Usage == 0) {
-                    continue;
-                }
+                if (cls.IsNative || cls.Access == AccessType.STATIC) continue;
+                if (cls.IsEnum) continue;
+                if (cls.Usage == 0) continue;
                 Writer.Write("type ");
                 Writer.Write(cls.Real);
                 Writer.Write(" ");
@@ -612,29 +614,39 @@ namespace Run {
 
         #region Enums
 
+        bool SaveEnumsPrototypes() {
+            bool ok = false;
+            Writer.WriteLine();
+            foreach (var enm in Builder.Classes.Values) {
+                if (enm.IsEnum == false || enm.IsNative) {
+                    continue;
+                }
+                if (enm.Usage == 0) {
+                    continue;
+                }
+                Writer.Write("#define ");
+                Writer.Write(enm.Real);
+                Writer.Write(" ");
+                Writer.WriteLine(enm.Base.Real ?? enm.Base.Token.Value);
+                ok = true;
+            }
+            if (ok) {
+                Writer.WriteLine();
+            }
+            return ok;
+        }
+
         bool SaveEnumsDeclarations() {
             bool ok = false;
-            foreach (var enm in Builder.Enums.Values) {
-                if (enm.IsNative) {
+            foreach (var enm in Builder.Classes.Values) {
+                if (enm.IsEnum == false || enm.IsNative) {
                     continue;
                 }
                 if (enm.Usage == 0) {
                     continue;
                 }
                 foreach (EnumMember child in enm.Children) {
-                    Writer.Write(enm.Type.Real);
-                    if (enm.Type.IsPrimitive == false) {
-                        Writer.Write('*');
-                    }
-                    Writer.Write(' ');
-                    child.Save(Writer, Builder);
-                    Writer.Write(" = ");
-                    if (child.Expression != null) {
-                        child.Expression.Save(Writer, Builder);
-                    } else {
-                        Writer.Write(enm.Children.IndexOf(child));
-                    }
-                    Writer.WriteLine(";");
+                    child.SaveDeclaration(Writer, Builder);
                     ok = true;
                 }
             }
@@ -648,18 +660,16 @@ namespace Run {
 
         #region functions
 
-        bool SaveFunctionsDeclarations() {
+        bool SaveFunctionsPrototypes() {
             bool ok = false;
             foreach (Function func in Builder.Functions.Values) {
                 if (func.IsNative || (func is Constructor ctor && ctor.Type.Access == AccessType.STATIC)) {
                     continue;
                 }
                 if (func.Usage == 0) {
-                    var c = func as Constructor;
-                    if (c != null && (c.Parent as Class).Usage > 0) {
-                    } else {
-                        continue;
-                    }
+                    //if (!(func is Constructor c && (c.Parent as Class).Usage > 0)) {
+                    continue;
+                    //}
                 }
                 func.SaveDeclaration(Writer, Builder);
                 Writer.WriteLine(";");
@@ -674,13 +684,10 @@ namespace Run {
                 if (func.IsNative || (func is Constructor ctor && ctor.Type.Access == AccessType.STATIC)) {
                     continue;
                 }
-                //if (func.Usage == 0) continue;
                 if (func.Usage == 0) {
-                    var c = func as Constructor;
-                    if (c != null && (c.Parent as Class).Usage > 0) {
-                    } else {
-                        continue;
-                    }
+                    //if (!(func is Constructor c && (c.Parent as Class).Usage > 0)) {
+                    continue;
+                    //}
                 }
                 func.Save(Writer, Builder);
             }

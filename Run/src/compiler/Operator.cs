@@ -3,6 +3,7 @@
 namespace Run {
     public class Operator : Function {
         public override void Parse() {
+            (Parent as Class).HasOperators = true;
             SetAccess();
             bool err = false;
             if (Access != AccessType.INSTANCE) {

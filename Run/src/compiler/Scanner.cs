@@ -16,8 +16,9 @@ namespace Run {
             return Data;
         }
 
-        public void Dispose() {
+        void IDisposable.Dispose() {
             Reader?.Close();
+            GC.SuppressFinalize(this);
             Reader = null;
             Data = null;
         }
@@ -35,8 +36,7 @@ namespace Run {
             Address = Reader.BaseStream.GetType().GetProperty("Name")?.GetValue(Reader.BaseStream) as string;
         }
         internal virtual Token Scan() {
-            if (getToken(out Token t)) {
-                if (t.Line == 63) ;
+            if (GetTokenInternal(out Token t)) {
                 return t;
             }
             return null;
@@ -44,7 +44,7 @@ namespace Run {
 
         internal Token Test() {
             var current = Current;
-            if (getToken(out Token t)) {
+            if (GetTokenInternal(out Token t)) {
                 RollBack(t);
                 Current = current;
                 return t;
@@ -132,7 +132,7 @@ namespace Run {
         }
 
 
-        bool skip(bool newLines = false) {
+        bool SkipInternal(bool newLines = false) {
             Setup();
             if (Position < 0) {
                 Position = 0;
@@ -152,7 +152,7 @@ namespace Run {
         }
 
         internal bool Match(string m) {
-            if (!skip()) return false;
+            if (!SkipInternal()) return false;
             if (Position + m.Length >= Data.Length) return false;
             for (int i = 0; i < m.Length; i++) {
                 if (Data[Position + i] != m[i]) return false;
@@ -169,9 +169,9 @@ namespace Run {
         }
 
         public bool HasNext => Position < Data.Length;
-        public bool Skip(bool newLines = false) => skip(newLines);
+        public bool Skip(bool newLines = false) => SkipInternal(newLines);
         internal bool Expect(char ch) {
-            if (!skip())
+            if (!SkipInternal())
                 return false;
             if (Position >= Data.Length)
                 return false;
@@ -185,7 +185,7 @@ namespace Run {
                 Line = Line,
                 Position = Position,
             };
-            if (!isValidCharacter(Current)) {
+            if (!IsValidCharacter(Current)) {
                 return false;
             }
             Column += Current.Value.Length;
@@ -193,7 +193,7 @@ namespace Run {
         }
 
         internal bool Expect(string exp) {
-            if (string.IsNullOrEmpty(exp) || !skip())
+            if (string.IsNullOrEmpty(exp) || !SkipInternal())
                 return false;
             if (Position + exp.Length >= Data.Length)
                 return false;
@@ -218,7 +218,7 @@ namespace Run {
             Setup();
             var idx = Data.IndexOf(delimeter, Position);
             if (idx < 0) return Token.Empty;
-            Token token = new Token { Column = Column, Line = Line, Position = Position, Scanner = this, Value = Data.Substring(Position, idx - Position) };
+            Token token = new() { Column = Column, Line = Line, Position = Position, Scanner = this, Value = Data[Position..idx] };
             Position += token.Value.Length;
             Column += token.Value.Length;
             return token;
@@ -271,7 +271,7 @@ namespace Run {
         }
 
         internal char Peek() {
-            if (!skip()) {
+            if (!SkipInternal()) {
                 return char.MaxValue;
             }
             if (!Valid) {
@@ -281,7 +281,7 @@ namespace Run {
         }
 
         internal bool IsEOL() {
-            if (!skip(false))
+            if (!SkipInternal(false))
                 return true;
             if (!Valid || Data[Position] == '\n' || Data[Position] == '\r') {
                 if (Data[Position] == '\r') {
@@ -294,7 +294,7 @@ namespace Run {
         }
 
         internal void Ignore() {
-            getToken(out _);
+            GetTokenInternal(out _);
         }
 
         public bool Valid => Position < Data.Length;
@@ -311,7 +311,7 @@ namespace Run {
             }
         }
 
-        private bool getToken(out Token tok) {
+        private bool GetTokenInternal(out Token tok) {
             Setup();
             bool ok = true;
             Current = tok = new Token() {
@@ -334,7 +334,7 @@ namespace Run {
             var start = Position;
             if (IsNumber(tok)) {
                 goto end;
-            } else if (isValidCharacter(tok)) {
+            } else if (IsValidCharacter(tok)) {
                 goto end;
             } else if (Valid && char.IsLetter(Data[Position]) || Data[Position] == '_') {
                 for (int i = 0; i < 3 && Data[Position] == '_'; i++, Position++) ;
@@ -348,10 +348,14 @@ namespace Run {
                 if (Valid && Data[Position] == '_') {
                     return false;
                 }
-                tok.Value = Data.Substring(start, Position - start);
+                tok.Value = Data[start..Position];
                 switch (tok.Value) {
                     case "as":
                         tok.Type = TokenType.AS;
+                        tok.Family = TokenType.KEYWORD;
+                        break;
+                    case "in":
+                        tok.Type = TokenType.IN;
                         tok.Family = TokenType.KEYWORD;
                         break;
                     default:
@@ -406,13 +410,15 @@ namespace Run {
                 Position++;
             }
             if (Valid && Data[Position] == '.') {
-                Position++;
-                GetReal(tok);
+                if (Data.Length > Position + 1 && char.IsDigit(Data[Position + 1])) {
+                    Position++;
+                    GetReal(tok);
+                }
             }
-            tok.Value = (positive ? "" : "-") + Data.Substring(start, Position - start);
+            tok.Value = (positive ? "" : "-") + Data[start..Position];
         }
 
-        bool isValidCharacter(Token tok) {
+        bool IsValidCharacter(Token tok) {
             tok.Type = 0;
             if (!Valid)
                 return false;
@@ -462,7 +468,7 @@ namespace Run {
                         tok.Type = TokenType.PLUS;
                         tok.Family = TokenType.ARITMETIC;
                     }
-                    tok.Value = Data.Substring(start, (isDouble(Data[Position]) ? 2 : 1) + len);
+                    tok.Value = Data.Substring(start, (IsDouble(Data[Position]) ? 2 : 1) + len);
                     break;
                 case '-':
                     if (Valid && Data[Position + 1] == '-') {
@@ -479,7 +485,7 @@ namespace Run {
                         tok.Type = TokenType.MINUS;
                         tok.Family = TokenType.ARITMETIC;
                     }
-                    tok.Value = Data.Substring(start, (isDouble(Data[Position]) ? 2 : 1) + len);
+                    tok.Value = Data.Substring(start, (IsDouble(Data[Position]) ? 2 : 1) + len);
                     break;
                 case '/':
                     if (Valid && Data[Position + 1] == '*') {
@@ -510,7 +516,7 @@ namespace Run {
                         tok.Type = TokenType.DIVIDE;
                         tok.Family = TokenType.ARITMETIC;
                     }
-                    tok.Value = Data.Substring(start, (isDouble(Data[Position]) ? 2 : 1) + len);
+                    tok.Value = Data.Substring(start, (IsDouble(Data[Position]) ? 2 : 1) + len);
                     break;
                 case '*':
                     if (Valid && Data[Position + 1] == '=') {
@@ -522,7 +528,7 @@ namespace Run {
                         tok.Type = TokenType.MULTIPLY;
                         tok.Family = TokenType.ARITMETIC;
                     }
-                    tok.Value = Data.Substring(start, (isDouble(Data[Position]) ? 2 : 1) + len);
+                    tok.Value = Data.Substring(start, (IsDouble(Data[Position]) ? 2 : 1) + len);
                     break;
                 case ',':
                     tok.Type = TokenType.COMMA;
@@ -701,7 +707,7 @@ namespace Run {
                     }
                     tok.Type = TokenType.QUOTE;
                     tok.Family = TokenType.LITERAL;
-                    tok.Value = "\"" + Data.Substring(start + 1, Position - start - 1) + "\"";
+                    tok.Value = string.Concat("\"", Data.AsSpan(start + 1, Position - start - 1), "\"");
                     break;
                 case '\'':
                     Position++;
@@ -731,7 +737,7 @@ namespace Run {
                     if (Valid && Data[Position] == '\'') {
                         tok.Type = TokenType.CHAR;
                         tok.Family = TokenType.LITERAL;
-                        tok.Value = empty ? "0" : ("'" + Data.Substring(temp, Position - temp) + "'");
+                        tok.Value = empty ? "0" : ("'" + Data[temp..Position] + "'");
                     }
                     break;
                 default:
@@ -741,7 +747,7 @@ namespace Run {
             return tok.Type != 0;
         }
 
-        bool isDouble(char ch) {
+        bool IsDouble(char ch) {
             if (Valid && (Position + 1) < Data.Length && Data[Position + 1] == ch) {
                 Position++;
                 return true;

@@ -23,5 +23,7 @@
         public override string ToString() {
             return Value ?? Type.ToString();
         }
+
+        public Token Clone() => MemberwiseClone() as Token;
     }
 }

@@ -4,7 +4,8 @@ namespace Run {
     public static class Utils {
 
         static MethodInfo clone;
-        public static T Clone<T>(this T obj) {
+
+        public static T Clone<T>(this T obj) where T : class {
             if (clone == null) {
                 clone = typeof(T).GetMethod("MemberwiseClone", BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public);
             }

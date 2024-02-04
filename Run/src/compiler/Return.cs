@@ -6,9 +6,7 @@ namespace Run {
 
         public override void Parse() {
             if (Scanner.IsEOL()) return;
-            Expression = new Expression();
-            Expression.SetParent(this);
-            Expression.Parse();
+            Expression = Expression.ParseExpression(this);
         }
 
         public override void Print() {

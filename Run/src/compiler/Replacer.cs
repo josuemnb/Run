@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using System.Text;
 
 namespace Run {
@@ -9,15 +10,76 @@ namespace Run {
         public string Format;
         public object[] Args;
     }
-    public class Replacer {
-        public Builder Builder;
+    public class Replacer(Builder builder) {
+        public Builder Builder = builder;
         public Dictionary<string, ReplaceToken> TokenAnnotations = new(0);
-        public Replacer(Builder builder) {
-            Builder = builder;
-        }
+
         public void Replace() {
             //RegisterAnnotations();
-            Replace(Builder.Program);
+            //Replace(Builder.Program);
+            ReplaceAll();
+        }
+
+        void ReplaceAll() {
+            foreach (var id in Builder.Program.DeepFindChildrenInternal<IdentifierExpression>()) {
+                if (id.From is Property property && property.SimpleKind == Property.PropertyKind.None) {
+                    var assign = Expression.FindAssignment(id);
+                    if (assign != null) {
+                        var caller = id.Parent as DotExpression;
+                        property.Getter.Usage = 1;
+                        var getter = new CallExpression(assign, false) {
+                            Caller = caller?.Left,
+                            Function = property.Getter,
+                            Real = property.Getter.Real,
+                        };
+                        if (assign is AssignExpression a) a.Right = getter;
+                        if (assign is Var v) v.Initializer = getter;
+                    }
+                }
+            }
+            foreach (var binary in Builder.Program.DeepFindChildrenInternal<BinaryExpression>()) {
+                if (binary.Parent is Block b) {
+                    var index = b.Children.IndexOf(binary);
+                    if (index == -1) continue;
+                }
+                var type = binary.Left.Type;
+                if (type == null || type.Children.Count == 0 || type.HasOperators == false) continue;
+                for (int i = 0; i < type.Children.Count; i++) {
+                    var child = type.Children[i];
+                    if (child is Operator op && op.Token.Type == binary.Token.Type) {
+                        if (op.Parameters.Children.Count != 1) {
+                            Builder.Program.AddError(binary.Token, Error.OnlyOneParameterAllowedInOperator);
+                            break;
+                        }
+                        if (op.Parameters.Children[0] is Parameter p && p.Type != null && Validator.AreCompatible(Builder, p, binary.Right) == false) {
+                            Builder.Program.AddError(binary.Token, Error.IncompatibleType);
+                            break;
+                        }
+                        op.Usage = 1;
+                        var getter = new CallExpression(binary.Parent, false) {
+                            Caller = binary.Left,
+                            Function = op,
+                            Real = op.Real,
+                            Arguments = new List<Expression> { binary.Right, },
+                        };
+                        if (binary.Parent is Block block) {
+                            block.Children[block.Children.IndexOf(binary)] = getter;
+                            break;
+                        } else if (binary.Parent is BinaryExpression bin) {
+                            if (bin.Left == binary) bin.Left = getter;
+                            else bin.Right = getter;
+                        }
+                        //return new Caller() {
+                        //    Token = bin.Token,
+                        //    Parent = bin.Parent,
+                        //    Function = op,
+                        //    Type = op.Type,
+                        //    Real = op.Real,
+                        //    Parameters = new() { bin.Left, bin.Right },
+                        //};
+                    }
+                }
+            }
         }
 
         void RegisterAnnotations() {
@@ -55,12 +117,12 @@ namespace Run {
                                                     args.Add(ann.Token.Value);
                                                     break;
                                                 case "Length":
-                                                    format.Append("{").Append(count++).Append("}");
+                                                    format.Append('{').Append(count++).Append('}');
                                                     args.Add(ann.Token.Length);
                                                     break;
                                                 default:
                                                     if (ann.Token.GetType().GetProperty(prop) is var propInfo && propInfo != null) {
-                                                        format.Append("{").Append(count++).Append("}");
+                                                        format.Append('{').Append(count++).Append('}');
                                                         args.Add(propInfo.GetValue(ann.Token));
                                                     }
                                                     break;
@@ -75,7 +137,7 @@ namespace Run {
                                 }
                                 replacer = new ReplaceToken() {
                                     Format = format.ToString(),
-                                    Args = args.ToArray(),
+                                    Args = [.. args],
                                 };
                             }
                             if (TokenAnnotations.TryAdd(split[0], replacer) == false) {
@@ -97,6 +159,8 @@ namespace Run {
         }
 
         Block Replace(Block block) {
+            if (block.Replaced) return block;
+            block.Replaced = true;
             for (int i = 0; i < block.Children.Count; i++) {
                 block.Children[i] = Replace(block.Children[i]);
             }
@@ -109,22 +173,22 @@ namespace Run {
                 case For @for: return Replace(@for);
                 case If @if: return Replace(@if);
                 case Return @return: return Replace(@return);
-                case This t: return Replace(t);
+                case ThisExpression t: return Replace(t);
                 case Property property: return Replace(property);
                 case Var var: return Replace(var);
                 case Block block: return Replace(block);
-                case Expression expr: expr.Result = Replace(expr.Result); return expr;
-                case Caller call: return Replace(call);
-                case Ternary ter: return Replace(ter);
-                case Parenteses p: return Replace(p);
-                case MemberAccess dot: return Replace(dot);
-                case Cast cast: return Replace(cast);
-                case SizeOf s: return Replace(s);
+                case CallExpression call: return Replace(call);
+                case TernaryExpression ter: return Replace(ter);
+                case ParentesesExpression p: return Replace(p);
+                case DotExpression dot: return Replace(dot);
+                case CastExpression cast: return Replace(cast);
+                //case SizeOf s: return Replace(s);
                 case TypeOf t: return Replace(t);
-                case New n: return Replace(n);
-                case Binary bin: return Replace(bin);
-                case Identifier id: return Replace(id);
+                case NewExpression n: return Replace(n);
+                case IdentifierExpression id: return Replace(id);
+                case BinaryExpression bin: return Replace(bin);
                 case DeclaredType dc: return Replace(dc);
+                case ContentExpression expr: expr.Content = (Expression)Replace(expr.Content); return expr;
             }
             return ast;
         }
@@ -136,12 +200,12 @@ namespace Run {
             return dc;
         }
 
-        AST Replace(For @for) {
+        For Replace(For @for) {
             if (@for.Condition != null) {
-                @for.Condition.Result = Replace(@for.Condition.Result);
+                @for.Condition = (Expression)Replace(@for.Condition);
             }
             if (@for.Step != null) {
-                @for.Step.Result = Replace(@for.Step.Result);
+                @for.Step = (Expression)Replace(@for.Step);
             }
             if (@for.Start != null) {
                 @for.Start = Replace(@for.Start);
@@ -150,27 +214,28 @@ namespace Run {
             return @for;
         }
 
-        AST Replace(If @if) {
+        If Replace(If @if) {
             //may is else
             if (@if.Condition != null) {
-                @if.Condition.Result = Replace(@if.Condition.Result);
+                @if.Condition = (Expression)Replace(@if.Condition);
             }
             Replace(@if as Block);
             return @if;
         }
 
-        AST Replace(Return @return) {
+        Return Replace(Return @return) {
             if (@return.Expression != null) {
-                @return.Expression.Result = Replace(@return.Expression.Result);
+                @return.Expression = (Expression)Replace(@return.Expression);
             }
             return @return;
         }
-        AST Replace(This t) {
+
+        static ThisExpression Replace(ThisExpression t) {
             return t;
         }
-        AST Replace(Property property) {
+        Property Replace(Property property) {
             if (property.Initializer != null) {
-                property.Initializer.Result = Replace(property.Initializer.Result);
+                property.Initializer = (Expression)Replace(property.Initializer);
             }
             if (property.Getter != null) {
                 property.Getter = Replace(property.Getter) as Function;
@@ -180,89 +245,80 @@ namespace Run {
             }
             return property;
         }
-        AST Replace(Var var) {
+        Var Replace(Var var) {
             if (var.Initializer != null) {
-                var.Initializer.Result = Replace(var.Initializer.Result);
+                var.Initializer = (Expression)Replace(var.Initializer);
             }
             return var;
         }
-        AST Replace(Caller call) {
-            if (call.Parameters != null) {
-                for (int i = 0; i < call.Parameters.Count; i++) {
-                    call.Parameters[i] = Replace(call.Parameters[i]);
+        CallExpression Replace(CallExpression call) {
+            if (call.Arguments != null) {
+                for (int i = 0; i < call.Arguments.Count; i++) {
+                    call.Arguments[i] = (Expression)Replace(call.Arguments[i]);
                 }
             }
             return call;
         }
-        AST Replace(Ternary ter) {
-            ter.Condition = Replace(ter.Condition);
-            ter.IsTrue.Result = Replace(ter.IsTrue.Result);
-            ter.IsFalse.Result = Replace(ter.IsFalse.Result);
+        TernaryExpression Replace(TernaryExpression ter) {
+            ter.Condition = (Expression)Replace(ter.Condition);
+            ter.True = (Expression)Replace(ter.True);
+            ter.False = (Expression)Replace(ter.False);
             return ter;
         }
-        AST Replace(Parenteses p) {
-            p.Expression = Replace(p.Expression);
+        ParentesesExpression Replace(ParentesesExpression p) {
+            p.Content = (Expression)Replace(p.Content);
             return p;
         }
-        AST Replace(Identifier id) {
+
+        static Expression Replace(IdentifierExpression id) {
             if (id.Virtual) return id;
             if (id.From is Property property && property.SimpleKind == Property.PropertyKind.None) {
-                int back = 1;
-                var parent = id.Parent as Binary;
-                if (parent == null && id.Parent != null) {
-                    back++;
-                    parent = id.Parent.Parent as Binary;
-                }
-                if (parent != null && (parent.Left == id || parent.Left == id.Parent) && parent.Token.Type == TokenType.ASSIGN) {
-                    return new PropertySetter {
-                        Back = back,
-                        Function = property.Setter,
-                        Parent = id.Parent,
-                        From = property,
-                        Real = property.Setter.Real,
-                        Parameters = new() { parent.Right },
+                var assign = Expression.FindParent<AssignExpression>(id);
+                if (assign != null) {
+                    property.Getter.Usage = 1;
+                    var getter = new CallExpression(assign, false) {
+                        Function = property.Getter,
+                        Real = property.Getter.Real,
                     };
+                    assign.Right = getter;
+                    return getter;
                 }
-                return new Caller {
-                    From = property,
-                    Parent = id.Parent,
-                    Function = property.Getter,
-                    Real = property.Getter.Real,
-                };
             }
             return id;
         }
-        AST Replace(MemberAccess memberAccess) {
-            memberAccess.Left = Replace(memberAccess.Left);
-            memberAccess.Right = Replace(memberAccess.Right);
-            if (memberAccess.Right is PropertySetter caller && caller.Back > 0) {
+        AST Replace(DotExpression dot) {
+            dot.Left = (Expression)Replace(dot.Left);
+            dot.Right = (Expression)Replace(dot.Right);
+            if (dot.Right is PropertySetter caller && caller.Back > 0) {
                 caller.Back--;
-                caller.This = memberAccess.Left;
+                caller.This = dot.Left;
                 return caller;
             }
-            return memberAccess;
+            return dot;
         }
-        AST Replace(Cast cast) {
-            cast.Expression.Result = Replace(cast.Expression.Result);
+        CastExpression Replace(CastExpression cast) {
+            cast.Left = (Expression)Replace(cast.Left);
+            cast.Right = (Expression)Replace(cast.Right);
             return cast;
         }
-        AST Replace(SizeOf sizeOf) {
-            sizeOf.Expression.Result = Replace(sizeOf.Expression.Result);
+        SizeOf Replace(SizeOf sizeOf) {
+            sizeOf.Content = (Expression)Replace(sizeOf.Content);
             return sizeOf;
         }
-        AST Replace(TypeOf typeOf) {
-            typeOf.Expression.Result = Replace(typeOf.Expression.Result);
+        TypeOf Replace(TypeOf typeOf) {
+            typeOf.Content = (Expression)Replace(typeOf.Content);
             return typeOf;
         }
-        AST Replace(New @new) {
-            //@new.Expression.Result = Replace(@new.Expression.Result);
-            @new.Caller = (Caller)Replace(@new.Caller);
+        NewExpression Replace(NewExpression @new) {
+            //@new.Expression.Content = Replace(@new.Expression.Content);
+            //@new.Caller = (Caller)Replace(@new.Caller);
             //@new.Calling = Replace(@new.Calling);
+            @new.Content = (Expression)Replace(@new.Content);
             return @new;
         }
-        AST Replace(Binary bin) {
-            bin.Left = Replace(bin.Left);
-            bin.Right = Replace(bin.Right);
+        AST Replace(BinaryExpression bin) {
+            bin.Left = (Expression)Replace(bin.Left);
+            bin.Right = (Expression)Replace(bin.Right);
             if (bin.Token == null) {
                 return bin;
             }
@@ -279,14 +335,14 @@ namespace Run {
                         Builder.Program.AddError(bin.Token, Error.IncompatibleType);
                         break;
                     }
-                    return new Caller() {
-                        Token = bin.Token,
-                        Parent = bin.Parent,
-                        Function = op,
-                        Type = op.Type,
-                        Real = op.Real,
-                        Parameters = new() { bin.Left, bin.Right },
-                    };
+                    //return new Caller() {
+                    //    Token = bin.Token,
+                    //    Parent = bin.Parent,
+                    //    Function = op,
+                    //    Type = op.Type,
+                    //    Real = op.Real,
+                    //    Parameters = new() { bin.Left, bin.Right },
+                    //};
                 }
             }
             if (bin.Left is PropertySetter caller && caller.Back > 0) {

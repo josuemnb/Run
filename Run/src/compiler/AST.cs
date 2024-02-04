@@ -22,6 +22,7 @@ namespace Run {
         public Program Program;
         public Module Module;
         public string Real;
+        internal bool Validated;
 
         public static AccessModifier CurrentModifier = AccessModifier.PUBLIC;
         public static AccessType CurrentAccess = AccessType.INSTANCE;
@@ -38,7 +39,6 @@ namespace Run {
         //    get => (Generics != null && Generics.Count > 0);
         //}
 
-        public static readonly ValueType Null = new() { Type = null };
         public static readonly AST NewLine = new();
         public static readonly AST Empty = new() { Token = Token.Empty };
 
@@ -61,9 +61,7 @@ namespace Run {
             Module = parent.Module;
             Program = parent.Program;
             Scanner = parent.Scanner;
-            if (Token == null) {
-                Token = Scanner.Current;
-            }
+            Token ??= Scanner.Current;
             Level = parent.Level + 1;
         }
 
@@ -76,7 +74,7 @@ namespace Run {
         }
 
         public virtual AST FindName(string name) {
-            if (Token != null && (Token.Value == name || Real == name)) return this;
+            if (Token != null && (Token.Value == name || Real == name) && this is not Expression) return this;
             return Parent != this ? Parent?.FindName(name) : null;
         }
 
@@ -126,10 +124,10 @@ namespace Run {
                                     var start = a.Value.IndexOf('(');
                                     var end = a.Value.IndexOf(')');
                                     if (start > -1 && end > -1) {
-                                        fun.Native = new List<string> {
-                                            a.Value.Substring(0, start),
+                                        fun.Native = [
+                                            a.Value[..start],
                                             a.Value.Substring(start + 1, end - start - 1)
-                                        };
+                                        ];
                                     }
                                 }
                                 break;
@@ -166,8 +164,27 @@ namespace Run {
         }
 
         public virtual void Save(TextWriter writer, Builder builder) {
-            if (Token != null) {
-                writer.Write(Token.Value);
+            writer.Write(Real ?? Token?.Value);
+        }
+
+        public IEnumerable<T> DeepFindChildrenInternal<T>() where T : AST {
+            if (this is T t1) yield return t1;
+            if (this is Var v && v.Initializer is Expression init) {
+                foreach (var r in Expression.FindChildren<T>(init)) {
+                    yield return r;
+                }
+            }
+            if (this is Expression exp) {
+                foreach (var r in Expression.FindChildren<T>(exp)) {
+                    yield return r;
+                }
+            }
+            if (this is Block b) {
+                for (int i = 0; i < b.Children.Count; i++) {
+                    foreach (var r in b.Children[i].DeepFindChildrenInternal<T>()) {
+                        yield return r;
+                    }
+                }
             }
         }
     }

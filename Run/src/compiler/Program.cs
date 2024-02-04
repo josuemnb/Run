@@ -5,15 +5,16 @@ using System.IO;
 namespace Run {
 
     public class Program : Module {
-        public List<Error> Errors = new List<Error>();
+        public List<Error> Errors = [];
         public bool HasErrors { get; private set; }
         public Builder Builder;
         public Validator Validator;
         public Replacer Replacer;
+        public Transpiler Transpiler;
         public int Lines { get; internal set; } = 1;
 
         internal List<string> searchDirectories = new(0);
-        public HashSet<string> Libraries = new HashSet<string>(0);
+        public HashSet<string> Libraries = new(0);
         public Dictionary<string, Module> Usings = new(0);
         public bool HasMain;
         public Main Main;
@@ -92,21 +93,10 @@ namespace Run {
             });
         }
 
-        public void AddError(string msg, AST ast) {
-            GetStartEnd(ast, out int start, out int end);
-            HasErrors = true;
-            Errors.Add(new Error {
-                Message = msg,
-                Token = ast.Token,
-                Path = ast.Scanner.Path,
-                Code = ast.Scanner.Data.Substring(start, end - start),
-            });
-        }
-
         public void AddError(Token tok, string msg, bool force = false) {
             if (tok == null) return;
             if (Errors.Count > 0) {
-                var last = Errors[Errors.Count - 1];
+                var last = Errors[^1];
                 if (force == false && last.Token != null && last.Token.Scanner == tok.Scanner && last.Token.Line == tok.Line) return;
             }
             GetStartEnd(tok, out int start, out int end);
@@ -115,11 +105,11 @@ namespace Run {
                 Message = msg,
                 Token = tok,
                 Path = tok.Scanner.Path,
-                Code = tok.Scanner.Data.Substring(start, end - start),
+                Code = tok.Scanner.Data[start..end],
             });
         }
 
-        public void Build() {
+        public void Build(bool includeBuiltin = true) {
             if (Scanner == null) {
                 return;
             }
@@ -127,7 +117,7 @@ namespace Run {
                 return;
             }
             Builder = new Builder(this);
-            Builder.Build();
+            Builder.Build(includeBuiltin);
             if (PrintErrors() == false) {
 
             }
@@ -165,7 +155,7 @@ namespace Run {
             }
         }
 
-        internal void PrintOk((int Left, int Top) position) {
+        internal static void PrintOk((int Left, int Top) position) {
             Console.SetCursorPosition(position.Left, position.Top);
             for (int i = position.Left; i < 20; i++) Console.Write('.');
             Console.WriteLine("OK");
@@ -184,10 +174,16 @@ namespace Run {
             Console.Write("  Transpiling ...");
             var position = Console.GetCursorPosition();
             Console.WriteLine();
-            var transpiler = new Transpiler(Builder);
-            if (transpiler.Save(ExecutionFolder + "/" + Path + ".c")) {
-                PrintOk(position);
-            }
+            Transpiler = new Transpiler(Builder);
+            Transpiler.Save(ExecutionFolder + "/" + Path + ".c");
+            PrintOk(position);
+        }
+
+        public void Compile() {
+            Console.Write("  Compiling ...");
+            var position = Console.GetCursorPosition();
+            Transpiler.Compile();
+            PrintOk(position);
         }
     }
 }

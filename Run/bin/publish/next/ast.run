@@ -1,0 +1,94 @@
+using scanner
+using program
+using errors
+using builder
+using "io/console"
+
+enum AccessModifier {
+    PUBLIC
+    PRIVATE
+    PROTECTED
+    INTERNAL
+}
+
+enum AccessType {
+    INSTANCE
+    STATIC
+}
+
+type AST {
+	var level: i32
+    var token: Token
+    var scanner: Scanner
+    var parent: AST
+    var real: string
+    var program: Program
+    var module: Module
+    var isPrimitive: bool
+    var isNative: bool
+    var modifier: AccessModifier
+    var access: AccessType
+
+    static var CurrentModifier: AccessModifier
+    static var CurrentAccess: AccessType
+
+    func parse { }
+
+    func setAccess { 
+        if (CurrentAccess == AccessType.STATIC) {
+            if typeof(this) == typeof(Module) {
+                program.addError(scanner.current, Error.InvalidAccessDefinition)
+                return
+            }
+        }
+        modifier = CurrentModifier
+        access = CurrentAccess
+        CurrentModifier = AccessModifier.PUBLIC
+        CurrentAccess = AccessType.INSTANCE
+    }
+
+    func setParent(.parent) {
+        module = parent.module
+        program = parent.program
+        scanner = parent.scanner
+        level = parent.level + 1
+    }
+
+    property root:AST {
+        get {
+			var temp = this
+			for temp.parent != null => temp = temp.parent
+			return temp
+		}
+	}
+
+    func findName(name: string): AST {
+        if (token != null) && (token.value == name) || (real == name) => return this
+        if parent != null => return parent.findName(name)
+        return null
+    }
+
+    func findChildren(name: string): AST {
+        if (token != null) && (token.value == name) => return this
+        return null
+    }
+
+    func getName(tok: Token): bool {
+        tok = scanner.getName(false)
+        if (tok == null) {
+            program.addError(scanner.current, Error.ExpectingName)
+            return false
+        }
+        return true
+    }
+
+    func save(writer:FileWriter, builder:Builder) {
+        if token!=null => writer.write(token.value)
+    }
+
+    func print => print(this)
+
+    static func print(ast: AST) {
+        if (ast != null) => Console.writeLine(" ".repeat(ast.level * 2) + "[" + typeof(ast).name + "] " + ast.token.value)
+    }
+}

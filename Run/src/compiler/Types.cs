@@ -27,7 +27,6 @@ namespace Run {
         EXPRESSION,
         STATEMENT,
         KEYWORD,
-        MODULE,
         FUNCTION,
         BUILTIN,
         VARIABLE,
@@ -74,6 +73,7 @@ namespace Run {
         VA_ARGS,
         SPECIAL,
         SYNTAX,
+        IN,
         AT,
         NOT_EQUAL,
         AS,
@@ -81,6 +81,7 @@ namespace Run {
         TREE_WAY,
         SHIFT_RIGHT,
         SHIFT_LEFT,
+        NULL,
     }
 
     public enum IsFlags {

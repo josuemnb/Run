@@ -75,8 +75,8 @@ namespace Run {
             }
             if (path == null || File.Exists(path) == false) {
                 if (File.Exists(System.IO.Path.Combine(Environment.CurrentDirectory, path)) == false) {
-                    if (parent == null || parent.Scanner != null && File.Exists(System.IO.Path.Combine(System.IO.Path.GetDirectoryName(parent.Scanner.Address), path)) == false) {
-                        parent.Program.AddError(Error.PathNotFound(path));
+                    if (parent == null || parent.Scanner == null) {
+                        Console.Error.WriteLine("File not found: " + path);
                         return;
                     } else {
                         path = System.IO.Path.Combine(System.IO.Path.GetDirectoryName(parent.Scanner.Address), path);

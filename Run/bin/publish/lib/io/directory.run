@@ -1,0 +1,93 @@
+// VERY IMPORTANT
+// DO NOT CHANGE THIS FILE
+
+@native(mkdir($path):i32)
+@header(sys/stat.h)
+func mkdir(path:string):i32
+
+@native(rmdir($path):i32)
+@header(sys/stat.h)
+func rmdir(path:string):i32
+
+@native(GetFileAttributes($path))
+@header(windows.h)
+func opendir(path:string):i32
+
+@native(readdir($dir))
+@header(dirent.h)
+func readdir(dir:DIR):dirent
+
+@native(FindFirstFileA($path,$data))
+@header(windows.h)
+func findFirstFile(path:string,data:WIN32_FIND_DATA):HANDLE
+
+@native(FindNextFileA($handle,$data))
+@header(windows.h)
+func findNextFile(handle:HANDLE,data:WIN32_FIND_DATA):i32
+
+@native(FindClose($handle))
+@header(windows.h)
+func findClose(handle:HANDLE):i32
+
+@primitive
+@native(HANDLE)
+@header(windows.h)
+type HANDLE {}
+
+@native(FILETIME)
+@header(windows.h)
+type FILETIME {}
+
+@native(WIN32_FIND_DATA)
+@header(windows.h)
+type WIN32_FIND_DATA {
+	var dwFileAttributes: i32
+	var ftCreationTime: FILETIME
+	var ftLastAccessTime: FILETIME
+	var ftLastWriteTime: FILETIME
+	var nFileSizeHigh: i32
+	var nFileSizeLow: i32
+	var dwReserved0: i32
+	var dwReserved1: i32
+	var cFileName: string
+	var cAlternateFileName: string
+}
+
+type FileList:arrayString {
+	var path:string
+
+	func dispose() {
+		for var i=0;i<size;i++ {
+			var item = get(i)
+			delete item
+		}
+		base.dispose()	
+	}
+}
+
+static type Directory {
+
+	static func create(path:string):bool => mkdir(path) == 0
+
+	static func delete(path:string):bool => rmdir(path) == 0
+
+	static func exists(path:string):bool => opendir(path) != 0
+
+	static func getFiles(path:string): FileList {
+		var files = new FileList()
+		files.path = path
+		var hFind: HANDLE
+		var data = new WIN32_FIND_DATA()
+
+		if (hFind = findFirstFile(path, data)) >= 0 {
+			files.add(data.cFileName.clone())
+		 	for findNextFile(hFind, data) {
+				files.add(data.cFileName.clone())
+		 	}
+		 	findClose(hFind)
+		}
+
+		delete data
+		return files
+	}
+}
