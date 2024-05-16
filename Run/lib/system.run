@@ -3,21 +3,21 @@
 
 @header(memory.h)
 @native(memcpy($dest, $src, $size))
-func copy(dest:pointer, src:pointer, size:i32)
+function copy(dest:pointer, src:pointer, size:i32)
 
 @native(memcpy($dest,$src + $sOffset, $size))
-func copy(dest:pointer, src:pointer, size:i32, sOffset:i32)
+function copy(dest:pointer, src:pointer, size:i32, sOffset:i32)
 
 @native(memcpy($dest + $dOffset,$src + $sOffset, $size))
-func copy(dest:pointer, src:pointer, size:i32, sOffset:i32, dOffset:i32)
+function copy(dest:pointer, src:pointer, size:i32, sOffset:i32, dOffset:i32)
 
 //@header(lib/allocator.h)
 @header(memory.h)
 @native(malloc($s))
-func alloc(s:i32):pointer
+function alloc(s:i32):pointer
 
 @native(realloc($p, $s))
-func realloc(p:pointer,s:i32):pointer
+function realloc(p:pointer,s:i32):pointer
 
 @native(free($p))
-func free(p:pointer):i32
+function free(p:pointer):i32

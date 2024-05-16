@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.IO;
 
 namespace Run {
@@ -20,7 +19,7 @@ namespace Run {
                 return;
             }
             if (Token.Type == TokenType.QUOTE) {
-                Token.Value = Token.Value.Substring(1, Token.Value.Length - 2);
+                Token.Value = Token.Value[1..^1];
             }
             if (Scanner.IsEOL() == false) {
                 if (GetName(out Nick) == false) return;

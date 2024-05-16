@@ -16,7 +16,7 @@ type Program: Module {
     this(path:string):base(path) {
 	}
     
-    func addError(msg: string) {
+    function addError(msg: string) {
         hasErrors = true
         //errors.Add(new Error {
         //    Message = msg,
@@ -25,7 +25,7 @@ type Program: Module {
         //});
     }
 
-    func addError(msg: string, ast: AST) {
+    function addError(msg: string, ast: AST) {
         var start:i32
         var end:i32
         getStartEnd(ast, start, end)
@@ -38,7 +38,7 @@ type Program: Module {
         //});
     }
 
-    func addError(tok: Token, msg: string) {
+    function addError(tok: Token, msg: string) {
         if (tok == null) => return
         var start:i32
         var end:i32
@@ -52,14 +52,14 @@ type Program: Module {
         //});
     }
 
-    static func getStartEnd(ast: AST, start:i32, end: i32) {
+    static function getStartEnd(ast: AST, start:i32, end: i32) {
         end = ast.scanner.data.indexOf("\n", ast.scanner.position) - 1
         start = ast.scanner.data.lastIndexOf("\n", (ast.scanner.position >= ast.scanner.size ? ast.scanner.size - 1 : ast.scanner.position) + 1)
         if start < 0 => start = 0
         if end < start => end = ast.scanner.size
     }
 
-    static func getStartEnd(token: Token, start: i32, end: i32) {
+    static function getStartEnd(token: Token, start: i32, end: i32) {
         if (token.position + token.value.size) >= token.scanner.size => token.position = token.scanner.size - 1
         end = token.scanner.data.indexOf("\n", token.position) - 1
         start = token.scanner.data.lastIndexOf("\n", (token.position >= token.scanner.size) ? token.scanner.size - 1 : token.position) + 1

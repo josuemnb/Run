@@ -1,5 +1,8 @@
-﻿using System;
+﻿using Microsoft.VisualStudio.TestPlatform.TestHost;
+using System;
+using System.Collections;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 
 namespace Run {
@@ -9,13 +12,16 @@ namespace Run {
         public bool HasErrors { get; private set; }
         public Builder Builder;
         public Validator Validator;
-        public Replacer Replacer;
+        //public Replacer Replacer;
         public Transpiler Transpiler;
-        public int Lines { get; internal set; } = 1;
+        public int LinesCompiled { get; internal set; } = 1;
+        public int LinesParsed { get; internal set; }
 
-        internal List<string> searchDirectories = new(0);
-        public HashSet<string> Libraries = new(0);
-        public Dictionary<string, Module> Usings = new(0);
+        Stopwatch Watch = new();
+        internal List<string> searchDirectories = [];
+        public HashSet<string> Libraries = [];
+        public Dictionary<string, AST> Implicits = [];
+        public Dictionary<string, Module> Usings = [];
         public bool HasMain;
         public Main Main;
         internal string ExecutionFolder;
@@ -30,6 +36,7 @@ namespace Run {
         }
 
         public override void Parse() {
+            Watch.Start();
             Program = this;
             Module = this;
             Parent = this;
@@ -37,13 +44,7 @@ namespace Run {
                 Console.Error.WriteLine("Source file not found");
                 return;
             }
-            if (PrintErrors()) {
-                return;
-            }
-            base.Parse();
-            if (PrintErrors() == false) {
-                //PrintOk(position);
-            }
+            Print("Parsing ...", base.Parse);
         }
 
         public bool PrintErrors() {
@@ -110,80 +111,69 @@ namespace Run {
         }
 
         public void Build(bool includeBuiltin = true) {
-            if (Scanner == null) {
-                return;
-            }
-            if (HasErrors || Errors.Count > 0) {
-                return;
-            }
-            Builder = new Builder(this);
-            Builder.Build(includeBuiltin);
-            if (PrintErrors() == false) {
-
-            }
+            Print("\nBuilding ...", () => (Builder = new(this)).Build(includeBuiltin));
         }
 
         public void Validate() {
-            if (Scanner == null) {
-                return;
-            }
-            if (HasErrors || Errors.Count > 0) {
-                return;
-            }
-            Console.Write("  Validating...");
-            var position = Console.GetCursorPosition();
-            Console.WriteLine();
-            Validator = new Validator(Builder);
-            Validator.Validate();
-            if (PrintErrors() == false) {
-                PrintOk(position);
-            }
-            Replace();
+            Print("\nValidating ...", (Validator = new(Builder)).Validate);
+            Count();
         }
 
         public void Replace() {
-            if (HasErrors || Errors.Count > 0) {
-                return;
-            }
-            Console.Write("  Replacing...");
-            var position = Console.GetCursorPosition();
-            Console.WriteLine();
-            Replacer = new Replacer(Builder);
-            Replacer.Replace();
-            if (PrintErrors() == false) {
-                PrintOk(position);
-            }
+            Print("\nReplacing ...", (new Replacer(Builder)).Replace);
         }
 
-        internal static void PrintOk((int Left, int Top) position) {
-            Console.SetCursorPosition(position.Left, position.Top);
-            for (int i = position.Left; i < 20; i++) Console.Write('.');
-            Console.WriteLine("OK");
+        public void Count() {
+            Print("\nCounting ...", new Counter(Builder).Count);
         }
 
         public void Transpile() {
+            Print("\nTranspiling ...", () => (Transpiler = new C_Transpiler(Builder)).Save(ExecutionFolder + "/" + Path));
+        }
+
+        public void PrintResults() {
+            if (PrintErrors()) {
+                return;
+            }
+            Console.WriteLine("\nErrors".PadRight(31, '.') + "None");
+            LinesParsed = 0;
+            foreach (var use in Usings.Values) {
+                LinesParsed += use.Scanner.Line;
+            }
+            Console.WriteLine("Parsed ".PadRight(30, '.') + LinesParsed + " LOC");
+            Console.WriteLine("Compiled ".PadRight(30, '.') + LinesCompiled + " LOC");
+            Console.WriteLine("Total".PadRight(30, '.') + Watch.ElapsedMilliseconds + " ms");
+        }
+
+        public void Compile() {
+            Print("\nCompiling ...", () => Transpiler?.Compile());
+        }
+
+        void Print(string msg, Action action) {
             if (Scanner == null) {
                 return;
             }
             if (HasErrors || Errors.Count > 0) {
                 return;
             }
-            Console.Write("  Counting .........");
-            new Counter(Builder).Count();
-            Console.WriteLine("OK");
-            Console.Write("  Transpiling ...");
+            Console.Out.Flush();
+            Console.Write(msg);
             var position = Console.GetCursorPosition();
             Console.WriteLine();
-            Transpiler = new Transpiler(Builder);
-            Transpiler.Save(ExecutionFolder + "/" + Path + ".c");
-            PrintOk(position);
+            var sw = Stopwatch.StartNew();
+            action?.Invoke();
+            if (PrintErrors() == false) {
+                PrintOk(position, sw.ElapsedMilliseconds);
+            }
         }
 
-        public void Compile() {
-            Console.Write("  Compiling ...");
-            var position = Console.GetCursorPosition();
-            Transpiler.Compile();
-            PrintOk(position);
+        internal static void PrintOk((int Left, int Top) position, long ms = -1) {
+            Console.Out.Flush();
+            var (Left, Top) = Console.GetCursorPosition();
+            Console.SetCursorPosition(position.Left, position.Top);
+            Console.WriteLine("".PadRight(30 - position.Left, '.') + "OK" + (ms >= 0 ? " " + ms + " ms" : ""));
+            Console.SetCursorPosition(Left, Top);
         }
+
     }
 }

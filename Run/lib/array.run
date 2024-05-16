@@ -1,159 +1,61 @@
 // VERY IMPORTANT
 // DO NOT CHANGE THIS FILE
 
-type arrayI32: array {
-	var items:i32[]
-
-	this {
-		size = 0
-		capacity = 8
-		items = new i32[capacity]
-	}
-
-	func add(item:i32) {
-		resize()
-		items[size] = item
-		size++
-	}
-
-	func contains(item:i32):bool {
-		for var i=0;i<size;i++ {
-			if items[i] == item => return true
-		}
-		return false
-	}
-
-	func add(a:arrayI32) {
-		if a==null || a.size==0 => return
-		for var i=0;i<a.size;i++ => add(a.get(i))
-	}
-
-	func get(index:i32):i32 {
-		if index<0 || index>=size => return null
-		return items[index]
-	} 
-
-	func resize() {
-		if size < capacity => return
-		capacity *=2
-		items = realloc(items as pointer, capacity * sizeof(i32)) as i32[]
-	}
-
-	func dispose() {
-		if size == 0 => return
-		size = 0
-		capacity = 0
-		delete items 
-	}
-
-}
-
-type arrayString: array {
-	var items:string[]
-	var hashes:i32[]
-
-	this {
-		size = 0
-		capacity = 8
-		items = new string[capacity]
-		hashes = new i32[capacity]
-	}
-
-	func add(item:string) {
-		resize()
-		items[size] = item
-		hashes[size] = item.hashCode
-		size++
-	}
-
-	func indexOf(item:string):i32 {
-		var hash = item.hashCode
-		for var i=0;i<size;i++ {
-			if hashes[i] == hash {
-				return i
-			}
-		}
-		return -1
-	}
-
-	func contains(item:string):bool => indexOf(item) > -1
-
-	func add(a:arrayString) {
-		if a==null || a.size==0 => return
-		for var i=0;i<a.size;i++ => add(a.get(i))
-	}
-
-	func get(index:i32):string {
-		if index<0 || index>=size => return null
-		print("index %d\n", index)
-		return items[index]
-	} 
-
-	func resize() {
-		if size < capacity => return
-		capacity *=2
-		items = realloc(items as pointer, capacity * sizeof(string)) as string[]
-		hashes = realloc(hashes as pointer, capacity * sizeof(i32)) as i32[]
-	}
-
-	func dispose() {
-		if size == 0 => return
-		size = 0
-		capacity = 0
-		delete items 
-		delete hashes
-	}
-}
-
-type arrayAny: array {
-	var items:pointer[]
-
-	this {
-		size = 0
-		capacity = 8
-		items = new pointer[capacity]
-	}
-
-	func add(item:pointer) {
-		resize()
-		items[size] = item
-		size++
-	}
-
-	func contains(item:pointer):bool {
-		for var i=0;i<size;i++ {
-			if items[i] == item => return true
-		}
-		return false
-	}
-
-	func add(a:arrayAny) {
-		if a==null || a.size==0 => return
-		for var i=0;i<a.size;i++ => add(a.get(i))
-	}
-
-	func get(index:i32):pointer {
-		if index<0 || index>=size => return null
-		return items[index]
-	} 
-
-	func resize() {
-		if size < capacity => return
-		capacity *=2
-		items = realloc(items, capacity * sizeof(pointer))
-	}
-
-	func dispose() {
-		if size == 0 => return
-		size = 0
-		capacity = 0
-		delete items 
-	}
-}
-
 type array {
 	var size:i32
+	var itemSize:i32
 	var capacity:i32
+	var items:any[]
 
-	func toString():string => size.toString() + " of " + capacity.toString()
+	this(.itemSize, .capacity) {
+		items = new any[capacity]
+		size = 0
+	}
+
+	this(itemSize:i32): this(itemSize,8) {}
+
+	indexer [i:i32]:any {
+  		get => get(i)
+  		set => set(i, value)
+  	}
+  
+  	function set(index:i32, item:any) {
+  		if index<0 || index>=size => return
+  		items[index] = item
+  	}
+  
+  	function add(item:any) {
+  		resize()
+  		items[size] = item
+  		size++
+  	}
+  
+  	function indexOf(item:any):i32 {
+  		for var i=0;i<size;i++ {
+  			if items[i] == item {
+  				return i
+  			}
+  		}
+  		return -1
+  	}
+  
+  	function contains(item:any):bool => indexOf(item) > -1
+  
+  	function get(index:i32):any {
+  		if index<0 || index>=size => return null
+  		return items[index]
+  	} 
+  
+  	function resize() {
+  		if size < capacity => return
+  		capacity *=2
+  		items = realloc(items as pointer, capacity * sizeof(any)) as any[]
+  	}
+  
+  	function dispose() {
+  		if size == 0 => return
+  		size = 0
+  		capacity = 0
+  		delete items 
+  	}
 }

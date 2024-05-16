@@ -2,20 +2,18 @@
 // DO NOT CHANGE THIS FILE
 
 @native(floor($x):f64)
-func floor(x:f64):f64
+function floor(x:f64):f64
 
 @native(log10($x):f64)
-func log10(x:f64):f64
+function log10(x:f64):f64
 
 @native(abs($x):i32)
-func abs(x:i32):i32
+function abs(x:i32):i32
 
 @native(sprintf($s, $fmt, $args))
 @header(stdio.h)
-func sprintf(s:i8[], fmt:string, ...args:any)
+function sprintf(s:chars, fmt:chars, ...args:any)
 
-//TODO rever se deve ser primitiva e void*
-//@primitive
 @native(char)
 type pointer { }
 
@@ -23,7 +21,7 @@ type pointer { }
 @number
 @native(long long)
 type i64 { 
-	func toString:string => NumberHelper.toString(this, 21)
+	function toString:chars => NumberHelper.toString(this, 21)
 	static var max:i64 => 9223372036854775807
 	static var min:i64 => -9223372036854775808
 }
@@ -32,7 +30,7 @@ type i64 {
 @number
 @native(int)
 type i32 {
-	func toString:string => NumberHelper.toString(this as i64, 11)	
+	function toString:chars => NumberHelper.toString(this as i64, 11)	
 	static var max:i32 => 2147483647
 	static var min:i32 => -2147483648
 }
@@ -41,7 +39,7 @@ type i32 {
 @number
 @native(short)
 type i16 { 
-	func toString:string => NumberHelper.toString(this as i64, 7)	
+	function toString:chars => NumberHelper.toString(this as i64, 7)	
 	static var max:i16 => 32767
 	static var min:i16 => -32768
 }
@@ -50,7 +48,7 @@ type i16 {
 @number
 @native(char)
 type i8 { 
-	func toString:string => NumberHelper.toString(this as i64, 5)	
+	function toString:chars => NumberHelper.toString(this as i64, 5)	
 	static var max:i8 => 127
 	static var min:i8 => -128
 
@@ -81,7 +79,7 @@ type i8 {
 @native(unsigned long long)
 @number
 type u64 { 
-	func toString:string => NumberHelper.toString(this as u64, 21)	
+	function toString:chars => NumberHelper.toString(this as u64, 21)	
 	static var max:u64 => 18446744073709551615
 	static var min:u64 => 0
 }
@@ -90,7 +88,7 @@ type u64 {
 @number
 @native(unsigned int)
 type u32 { 
-	func toString:string => NumberHelper.toString(this as u64, 11)	
+	function toString:chars => NumberHelper.toString(this as u64, 11)	
 	static var max:u32 => 4294967295
 	static var min:u32 => 0
 }
@@ -99,7 +97,7 @@ type u32 {
 @number
 @native(unsigned short)
 type u16 { 
-	func toString:string => NumberHelper.toString(this as u64, 7)	
+	function toString:chars => NumberHelper.toString(this as u64, 7)	
 	static var max:u16 => 65535
 	static var min:u16 => 0
 }
@@ -108,7 +106,7 @@ type u16 {
 @number
 @native(unsigned char)
 type u8 { 
-	func toString:string => NumberHelper.toString(this as u64, 5)
+	function toString:chars => NumberHelper.toString(this as u64, 5)
 	static var max:u8 => 255
 	static var min:u8 => 0
 }
@@ -116,17 +114,17 @@ type u8 {
 @primitive
 @native(unsigned char)
 type bool { 
-	func toString:string => this ? "true" : "false"
+	function toString:chars => this ? "true" : "false"
 }
 
 @primitive
 @number
 @native(float)
 type f32 { 
-	func toString: string {	
-		var s = new i8[20]
+	function toString: chars {	
+		var s = new i8[40] as chars
 		sprintf(s, "%f", this)
-		return s as string
+		return s	
 	}	
 	static var max:f32 => 3.402823466e+38
 	static var min:f32 => -3.402823466e+38
@@ -136,10 +134,10 @@ type f32 {
 @number
 @native(double)
 type f64 { 
-	func toString: string {	
-		var s = new i8[26]
+	function toString: chars {	
+		var s = new i8[310] as chars
 		sprintf(s, "%f", this)
-		return s as string
+		return s
 	}
 	static var max:f64 => 1.7976931348623157e+308
 	static var min:f64 => -1.7976931348623157e+308

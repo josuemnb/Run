@@ -20,68 +20,68 @@ type FileWriter: FileBase, IWriter {
 		ended = 0
 	}
 
-	func writeInternal(value:pointer, length:i32, newLine:bool) {
+	function writeInternal(value:pointer, length:i32, newLine:bool) {
 		if ok == false => return
 		fwrite(value,length,1,fp)
 		if newLine => fwrite("\n" as pointer,1,1,fp)
 	}
 
-	func flush() {
+	function flush() {
 		if ok == false => return
 		fflush(fp)
 	}
 
-	func write(b:byte[], start:i32, count:i32) {
+	function write(b:byte[], start:i32, count:i32) {
 		if ok == false => return
 		fwrite(((b as pointer) + start) as pointer,count,1,fp)
 	}
 
-	func write(value:i32) => writeInternal(ref value,4,false)
+	function write(value:i32) => writeInternal(ref value,4,false)
 
-	func write(value:i64) => writeInternal(ref value,8,false)
+	function write(value:i64) => writeInternal(ref value,8,false)
 
-	func write(value:i16) => writeInternal(ref value,2,false)
+	function write(value:i16) => writeInternal(ref value,2,false)
 
-	func write(value:i8) => writeInternal(ref value,1,false)
+	function write(value:i8) => writeInternal(ref value,1,false)
 
-	func write(value:u32) => writeInternal(ref value,4,false)
+	function write(value:u32) => writeInternal(ref value,4,false)
 
-	func write(value:u64) => writeInternal(ref value,8,false)
+	function write(value:u64) => writeInternal(ref value,8,false)
 
-	func write(value:u16) => writeInternal(ref value,2,false)
+	function write(value:u16) => writeInternal(ref value,2,false)
 
-	func write(value:f32) => writeInternal(ref value,4,false)
+	function write(value:f32) => writeInternal(ref value,4,false)
 
-	func write(value:f64) => writeInternal(ref value,8,false)
+	function write(value:f64) => writeInternal(ref value,8,false)
 
-	func write(value:string) => writeInternal(value as pointer, value.size,false)
+	function write(value:string) => writeInternal(value as pointer, value.size,false)
 
-	func writeLine(value:i32) => writeInternal(ref value,4,true)
+	function writeLine(value:i32) => writeInternal(ref value,4,true)
 
-	func writeLine(value:i64) => writeInternal(ref value,8,true)
+	function writeLine(value:i64) => writeInternal(ref value,8,true)
 
-	func writeLine(value:i16) => writeInternal(ref value,2,true)
+	function writeLine(value:i16) => writeInternal(ref value,2,true)
 
-	func writeLine(value:i8) => writeInternal(ref value,1,true)
+	function writeLine(value:i8) => writeInternal(ref value,1,true)
 
-	func writeLine(value:u32) => writeInternal(ref value,4,true)
+	function writeLine(value:u32) => writeInternal(ref value,4,true)
 
-	func writeLine(value:u64) => writeInternal(ref value,8,true)
+	function writeLine(value:u64) => writeInternal(ref value,8,true)
 
-	func writeLine(value:u16) => writeInternal(ref value,2,true)
+	function writeLine(value:u16) => writeInternal(ref value,2,true)
 
-	func writeLine(value:f32) => writeInternal(ref value,4,true)
+	function writeLine(value:f32) => writeInternal(ref value,4,true)
 
-	func writeLine(value:f64) => writeInternal(ref value,8,true)
+	function writeLine(value:f64) => writeInternal(ref value,8,true)
 
-	func writeLine(value:string) => writeInternal(value as pointer, value.size,true)
+	function writeLine(value:string) => writeInternal(value as pointer, value.size,true)
 
-	func writeLine() {
+	function writeLine() {
 		if ok == false => return
 		fwrite("\n" as pointer,1,1,fp)
 	}
 
-	func dispose {
+	function dispose {
 		if ok == false => return
 		close()
 	}

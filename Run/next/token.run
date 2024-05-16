@@ -90,7 +90,7 @@ type Token {
     var kind:TokenKind
     var family:TokenKind
 
-    func toString :string => value
+    function toString :string => value
 
     static var Empty: Token
 }

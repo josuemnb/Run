@@ -19,7 +19,7 @@ type Socket {
 
 	this(.ip, .port) { }
 
-	func connect(): bool {
+	function connect(): bool {
 		
 	}	
 }

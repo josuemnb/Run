@@ -4,7 +4,7 @@
 using primitives
 
 static type NumberHelper {
-	static func toString(value:i64, size:i32):string {
+	static function toString(value:i64, size:i32):chars {
 		if value == 0 => return "0"
 		var s = new i8[size]
 		size--
@@ -17,16 +17,16 @@ static type NumberHelper {
 		}
 		for ;value>0; i++ {
 			s[size - i] = '0' + value % 10
-			value /=10
+			value /= 10
 		}
 		if neg {
 			s[size - i] = '-'
 			i++
 		}
-		return (s + size + 1 - i) as string
+		return (s + size + 1 - i) as chars
 	}	
 
-	static func toString(value:u64, size:i32):string {
+	static function toString(value:u64, size:i32):chars {
 		if value == 0 => return "0"
 		var s = new i8[size]
 		size--
@@ -34,8 +34,8 @@ static type NumberHelper {
 		var i = 0
 		for ;value>0; i++ {
 			s[size - i] = '0' + value % 10
-			value /=10
+			value /= 10
 		}
-		return (s + size + 1 - i) as string
+		return (s + size + 1 - i) as chars
 	}	
 }

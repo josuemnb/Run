@@ -4,48 +4,62 @@
 using system
 using primitives
 
-//@native(char)
-@array(i8)
+@native(char)
+type chars { }
+
 type string {
-
 	var value:i8[]
-	var size:i32
+	var _size = -1
 
-//	property size:i32 {
-//		get {
-//			var	m_size = 0
-//			for ;this[m_size];m_size++ { }
-//			return m_size
-//		}
-//	}
+	property size:i32 {
+		get {
+			if _size == -1 {
+				_size = 0
+				for value[_size] => _size++
+			}
+			return _size
+		}
+	}
 
-	this {
+	this { }
+
+	indexer [i:i32]:i8 {
+		get => this.value[i]
+		set => this.value[i] = value
 	}
 
 	this(sz:i32) {
 		value = new i8[sz + 1]
 		value[sz] = 0
-		size = sz
+		_size = sz
+	}
+
+	@implicit
+	this(c:chars) {
+		value = c as i8[]
+		_size = -1
+	}
+	this(c:chars, sz:i32) {
+		value = c as i8[]
+		_size = sz
 	}
 
 	this(s:string) {
-		size = s.size
-		value = new i8[size + 1]
-		value[size] = 0
-		copy(value as pointer,s.value as pointer,size)
+		_size = s.size
+		value = s.value	
 	}
 
 	property empty:bool => size == 0
 
-	func indexOf(s:string):i32 => indexOf(s,0)
+	function indexOf(s:string):i32 => indexOf(s,0)
 
-	func indexOf(s:string, start:i32):i32 {
+	function indexOf(s:string, start:i32):i32 {
 		for var i=start;i<size - s.size;i++ {
-			if s.value[0]!=value[i] => continue
+			if s[0]!=value[i] => continue
 			if s.size == 1 => return i
 			var found = true
 			for var l=1;l<s.size;l++ {
-				if s.value[l]!=value[i + l] {
+				if s[l]!=value[i + l] {
 					found = false
 					break
 				}
@@ -55,14 +69,14 @@ type string {
 		return -1
 	}
 
-	func lastIndexOf(s:string, start:i32): i32 {
+	function lastIndexOf(s:string, start:i32): i32 {
 		if start > size => start = size
 		for var i = start; i >= 0; i-- {
-			if s.value[0] != value[i] => continue
+			if s[0] != value[i] => continue
 			if s.size == 1 => return i
 			var found = true
 			for var l=1; l < s.size; l++ {
-				if s.value[l] != value[i + l] {
+				if s[l] != value[i + l] {
 					found = false
 					break
 				}
@@ -72,29 +86,42 @@ type string {
 		return -1
 	}
 
-	func lastIndexOf(s:string):i32 => lastIndexOf(s,size)
+	function lastIndexOf(s:string):i32 => lastIndexOf(s,size)
 
-	func contains(s:string):bool => indexOf(s) >= 0
+	function contains(s:string):bool => indexOf(s) >= 0
 
-	func append(s:string):string {
-		var str = new string()
+	function append(s:string):string {
+		var str = new string(size + s.size)
 		copy(str.value as pointer,this.value as pointer,size)
 		copy(str.value as pointer,s.value as pointer,s.size,0,size)
 		return str
 	}
 
-	func substring(start:i32):string => substring(start,size)
+	function substring(start:i32):string => substring(start,size)
 
-	func substring(start:i32, end:i32):string {
+	function substring(start:i32, end:i32):string {
 		var len = (end - start)
-		var newString = new string()
+		var newString = new string(len)
 		copy(newString.value as pointer,this.value as pointer,len, start)
 		return newString
 	}
 
-	func clone:string => new string(this)
+	//function split(sep:string):array {
+	//	var result = new array(sizeof(string))
+	//	var start = 0
+	//	var index = indexOf(sep)
+	//	for index >= 0 {
+	//		result.add(substring(start,index) as any)
+	//		start = index + sep.size
+	//		index = indexOf(sep,start)
+	//	}
+	//	result.add(substring(start) as any)
+	//	return result
+	//}
 
-	func equals(s:string):bool {
+	//function clone:string => new string(this)
+
+	function equals(s:string):bool {
 		if size != s.size => return false
 		for var i=0;i<size;i++  {
 			if value[i] != s.value[i] {
@@ -115,7 +142,7 @@ type string {
 		}
 	}
 
-	func repeat(count:i32): string {
+	function repeat(count:i32): string {
 		var s = new string()
 		for var i=0;i<count;i++ {
 			for var l=0;l<size;l++ {

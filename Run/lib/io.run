@@ -3,15 +3,15 @@
 
 @native(fread($buffer,$size,$count,$fp):i32)
 @header(stdio.h)
-func fread(buffer:pointer,size:i32,count:i32,fp:FILE):i32
+function fread(buffer:pointer,size:i32,count:i32,fp:FILE):i32
 
 @native(fwrite($buffer,$size,$count,$fp):i32)
 @header(stdio.h)
-func fwrite(buffer:pointer,size:i32,count:i32,fp:FILE):i32
+function fwrite(buffer:pointer,size:i32,count:i32,fp:FILE):i32
 
 @native(getIO($index))
 @header(stdio.h)
-func getIO(index:i32):FILE
+function getIO(index:i32):FILE
 
 @native(FILE)
 @header(stdio.h)

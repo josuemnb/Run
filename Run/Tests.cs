@@ -28,7 +28,7 @@ namespace Run {
         [TestMethod]
         public void TestClass() {
             TestCode("""
-              class cls {
+              type cls {
                 this(s:int) {
                 }
               }
@@ -48,7 +48,7 @@ namespace Run {
         [TestMethod]
         public void TestGenerics() {
             TestCode("""
-              class Array<T> {
+              type Array<T> {
                 var size:int
                 var items:T[]
 
@@ -58,7 +58,7 @@ namespace Run {
                 }
               }
 
-              class String:Array<char> {
+              type String:Array<char> {
               }
               main {
                 var s = new String[10]

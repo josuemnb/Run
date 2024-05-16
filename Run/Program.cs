@@ -3,16 +3,14 @@ using System.Diagnostics;
 
 namespace Run {
     class Run {
-        static void Main() {
-            var start = Stopwatch.StartNew();
-            var program = new Program("next/program");
+        static void Main(params string[] args) {
+            var program = new Program(args.Length > 0 ? args[0] : "next/main");
             program.Parse();
             program.Build(true);
-            //program.Print();
             program.Validate();
             program.Transpile();
-            Console.WriteLine("Took in " + start.ElapsedMilliseconds + " ms");
-            Console.WriteLine("Parsed " + program.Lines + " lines");
+            program.Compile();
+            program.PrintResults();
         }
     }
 }

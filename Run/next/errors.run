@@ -50,7 +50,7 @@ type Error {
     static var NativeClassNotAllowed = "Member not allowed in native class"
     static var ScopeOnlyOfConstructorNoParameters = "Scope only accepts constructor with no parameters"
 
-    static func pathNotFound(path: string): string {
+    static function pathNotFound(path: string): string {
         return "Path not founded: '" + path + "'"
     }
 }
