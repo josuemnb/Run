@@ -1,8 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Drawing;
 using System.IO;
 using System.Linq;
+using System.Text;
 
 namespace Run {
     public class C_Transpiler : Transpiler {
@@ -32,49 +34,35 @@ namespace Run {
                 #include <signal.h>
                 #include <stdarg.h>
                 #include <stdbool.h>
+
+                #include "../lib/arena.h"
+
                 """);
             SaveAnnotations();
+            SaveDefines();
+
+            SaveDeclarations();
+            SaveReflectionDeclarations();
+            SaveAllocator();
+            SaveImplementations();
+            SaveInitializer();
+            Writer.Close();
+        }
+
+        private void SaveDefines() {
             Writer.WriteLine("""
+                void resizeMap();
+                void* Alloc(int size, int id);
+                bool IS(int address, int is);
 
-                int* mapAlloc;
-                int mapSize = 0;
-                int mapCapacity = 16;
-
-                void resizeMap() {
-                    if(mapSize == 0) {
-                        mapAlloc = (int*)malloc(mapCapacity * sizeof(int));
-                    } else if (mapSize >= mapCapacity) {
-                        mapCapacity *= 2;
-                        mapAlloc = (int*)realloc(mapAlloc, mapCapacity * sizeof(int));
-                    }
-                }
-
-                #define NEW(T,total,id) (T*)Alloc(sizeof(T)*total, id)
-                #define REGISTER(val,id) mapAlloc[mapSize++] = (int)val; mapAlloc[mapSize++] = id; val
-                #define REGISTER_VAR(var,val,id) mapAlloc[mapSize++] = (int)(var); mapAlloc[mapSize++] = id; var = val
-
-                void* Alloc(int size, int id) {
-                  void* mem = malloc(size);
-                  resizeMap();
-                  return REGISTER(mem, id);
-                }
-
-                #define SCOPE(T)  &((T){0})
-                #define DELETE(V) free(V); V = 0
+                #define SCOPE(T,id)  ArenaScope(sizeof(T),id))
+                #define DELETE(V) ArenaFree(V); V = 0
                 #define CAST(T,exp) (*(T*)exp)
                 #define SIZEOF(V) (int)((char *)(&V+1)-(char*)(&V))
                 #define CONVERT(T,ptr) *((T*)ptr)
 
-                bool IS(int *a, int b) {
-                  for (int i = 0; i < mapSize; i++) {
-                    if (mapAlloc[i] == (int)a && mapAlloc[i + 1] == b) {
-                      return true;
-                    }
-                  }
-                  return false;
-                }
-
-                #define type typedef struct
+                //#define type typedef struct
+                #define pointer void*
                 #define null NULL
 
                 #define TRY(j) do { jmp_buf j; switch (setjmp(j)) { case 0: 
@@ -82,18 +70,60 @@ namespace Run {
                 #define ENDTRY } } while (0)
                 #define THROW(j,x) longjmp(j, x)
 
-                type ReflectionArgument ReflectionArgument;
-                type ReflectionMember ReflectionMember;
-                type ReflectionType ReflectionType;
+                #define NEW(T,total,id, region) (T*)ArenaAlloc(sizeof(T)*total,region, id)
 
+                int* mapAlloc;
+                int mapSize = 0;
+                int mapCapacity = 32 * 1024;
+
+                #define REGISTER(var, id)   \
+                  resizeMap();                       \
+                  mapAlloc[mapSize++] = (long)(var); \
+                  mapAlloc[mapSize++] = id
+                
+                typedef struct ReflectionArgument ReflectionArgument;
+                typedef struct ReflectionMember ReflectionMember;
+                typedef struct ReflectionType ReflectionType;
                 """);
-            SaveDeclarations();
-            //SaveReflectionDeclarations();
-            //SaveChecks();
-            SaveImplementations();
-            SaveInitializer();
-            Writer.Close();
         }
+
+        private void SaveAllocator() {
+            Writer.WriteLine("""
+                void resizeMap() {
+                    if(mapSize == 0) {
+                        mapAlloc = (int*)malloc(mapCapacity * sizeof(int));
+                    } else if (mapSize >= mapCapacity) {
+                        mapCapacity *= 1.5;
+                        mapAlloc = (int*)realloc(mapAlloc, mapCapacity * sizeof(int));
+                    }
+                }
+
+                void* Alloc(int size, int id) {
+                  void* mem = malloc(size);
+                  resizeMap();
+                  REGISTER(mem, id);
+                  return mem;
+                }
+
+                bool IS(int address, int is) {
+                  for (int i = 0; i < mapSize; i++) {
+                    if (mapAlloc[i] == address) {
+                      int id = mapAlloc[i + 1];
+                      if (id == is) return true;
+                    again:
+                      if (id<0 || id> __TypesCount__) return false;
+                      ReflectionType* tp = __TypesMap__[id];
+                      if (!tp) return false;
+                      if (tp->id == is) return true;
+                      id = tp->based;
+                      goto again;
+                    }
+                  }
+                  return false;
+                }
+                """);
+        }
+
         public override bool Compile() {
             if (Builder.Program.HasMain == false) {
                 Console.WriteLine("\n...No Main");
@@ -117,16 +147,16 @@ namespace Run {
             }
             return true;
         }
-        private void SaveReflectionDeclarations() {
 
-            Writer.WriteLine("type ReflectionArgument {");
-            Writer.WriteLine("\tconst char* name;");
-            Writer.WriteLine("\tint id;");
-            Writer.WriteLine("\tint array;");
-            Writer.WriteLine("} ReflectionArgument;\n");
-
+        void SaveReflectionStructs() {
             Writer.WriteLine("""
-                type ReflectionMember {
+                typedef struct ReflectionArgument {
+                    const char* name;
+                    int id;
+                    int array;
+                } ReflectionArgument;
+
+                typedef struct ReflectionMember {
                     const char* name;
                     int offset;
                     int kind;
@@ -137,7 +167,7 @@ namespace Run {
                     ReflectionArgument* args;
                 } ReflectionMember;
 
-                type ReflectionType {
+                typedef struct ReflectionType {
                     const char* name;
                     int id;
                     int based;
@@ -169,33 +199,23 @@ namespace Run {
                 #define REFLETION_CONSTRUCTOR 3
                 #define REFLETION_PROPERTY 4
                 #define REFLETION_INDEXER 5
-                """);
 
+                """);
+        }
+        private void SaveReflectionDeclarations() {
+            SaveReflectionStructs();
             foreach (var cls in Builder.Classes.Values.OrderBy(c => c.ID)) {
-                if (cls.IsNative) continue;
-                Writer.Write("ReflectionType reflection");
-                Writer.Write(cls.Real);
-                Writer.WriteLine(" = {");
-                Writer.Write("\t\"");
-                Writer.Write(cls.Token.Value);
-                Writer.Write("\", ");
-                Writer.Write(cls.ID);
-                Writer.Write(", ");
-                Writer.Write(cls.Base?.ID ?? -1);
-                Writer.Write(", ");
-                if (cls.Access == AccessType.STATIC || cls.Usage == 0) {
-                    Writer.WriteLine("0, NULL\n};");
-                    continue;
-                }
                 SaveClassReflection(cls);
             }
+            Writer.Write("\nstatic const int __TypesCount__ = ");
+            Writer.Write(Class.CounterID + 1);
+            Writer.WriteLine(";\n");
             Writer.Write("\nstatic const ReflectionType* __TypesMap__[");
-            Writer.Write(Class.CounterID);
+            Writer.Write(Class.CounterID + 1);
             Writer.WriteLine("] = {");
             foreach (var cls in Builder.Classes.Values.OrderBy(c => c.ID)) {
-                if (cls.IsNative) continue;
-                Writer.Write("\t&reflection");
-                Writer.Write(cls.Real);
+                Writer.Write("\t&reflection_");
+                Writer.Write(cls.Token.Value);
                 Writer.WriteLine(", ");
             }
             Writer.WriteLine("\t0\n};\n\n");
@@ -203,7 +223,7 @@ namespace Run {
             Writer.WriteLine("""
                 static ReflectionType* getType_string(char* name) {
                     for (int i = 0; i < 
-                """ + Class.CounterID + """
+                """ + (Class.CounterID + 1) + """
                 ; i++) {
                         ReflectionType* tp = __TypesMap__[i];
                         if (strcmp(tp->name, name) == 0) {
@@ -215,20 +235,38 @@ namespace Run {
                 """);
         }
         void SaveClassReflection(Class cls) {
-            var children = cls.Children.Where(c => c.Access != AccessType.STATIC && (c is Var v && v.Usage > 0 || c is Function f && f.Usage > 0)).ToList();
+            Writer.Write("ReflectionType reflection_");
+            Writer.Write(cls.Token.Value);
+            Writer.WriteLine(" = {");
+            Writer.Write("\t.name = \"");
+            Writer.Write(cls.Token.Value);
+            Writer.Write("\", .id = ");
+            Writer.Write(cls.ID);
+            Writer.Write(", .based = ");
+            Writer.Write(cls.Base?.ID ?? -1);
+            Writer.Write(", .count = ");
+            //if (cls.Access == AccessType.STATIC || cls.Usage == 0) {
+            //    Writer.WriteLine("0, NULL\n};");
+            //    return;
+            //}
+            //var children = cls.Children.Where(c => c.Access != AccessType.STATIC && (c is Var v && v.Usage > 0 || c is Function f && f.Usage > 0)).ToList();
+            var children = cls.Children.ToList();
             Writer.Write(children.Count);
             if (children.Count > 0) {
-                Writer.Write(",\n\t(ReflectionMember[");
+                Writer.Write(", .children = \n\t(ReflectionMember[");
                 Writer.Write(children.Count);
                 Writer.Write("]) {");
                 bool started = false;
                 foreach (var child in children) {
                     if (child.Access == AccessType.STATIC) continue;
-                    switch (child) {
-                        case Var v when v.Usage == 0:
-                        case Function f when f.Usage == 0:
-                            continue;
-                    }
+                    //switch (child) {
+                    //    case Var v when v.Usage == 0:
+                    //    case Function f when f.Usage == 0:
+                    //        continue;
+                    //}
+                    if (cls.Token.Value == "ReflectionType") continue;
+                    if (cls.Token.Value == "ReflectionMember") continue;
+                    if (cls.Token.Value == "ReflectionArgument") continue;
                     if (started)
                         Writer.Write(", ");
                     started = true;
@@ -236,78 +274,83 @@ namespace Run {
                 }
                 Writer.WriteLine("\n\t}\n};");
             } else {
-                Writer.WriteLine(", NULL\n};");
+                Writer.WriteLine(", .children = NULL\n};");
             }
         }
         void SaveReflectionMember(AST child, Class cls) {
             Writer.WriteLine("\n\t\t(ReflectionMember){");
-            Writer.Write("\t\t\t\"");
+            Writer.Write("\t\t\t.name = \"");
             Writer.Write(child.Token.Value);
-            Writer.Write("\", ");
+            Writer.Write("\", .offset = ");
             if (child is Var && child is not GetterSetter) {
                 Writer.Write("offsetof(");
                 Writer.Write(cls.Real);
                 Writer.Write(", ");
                 Writer.Write(child.Real);
-                Writer.Write("), ");
+                Writer.Write(") ");
             } else {
-                Writer.Write("0, ");
+                Writer.Write("0 ");
             }
-            var arg = false;
-            switch (child) {
-                case Property p:
-                    Writer.Write("REFLETION_PROPERTY, ");
-                    Writer.Write(p.Type.ID);
-                    Writer.Write(", 0, NULL, 0, NULL");
-                    break;
-                case Indexer x:
-                    Writer.Write("REFLETION_INDEXER, ");
-                    Writer.Write(x.Type.ID);
-                    Writer.Write(", ");
-                    Writer.Write(x.Index.Type.ID);
-                    Writer.Write(", NULL, 0, NULL\n\t\t");
-                    break;
-                case Field v:
-                    Writer.Write("REFLETION_FIELD, ");
-                    Writer.Write(v.Type.ID);
-                    Writer.Write(", ");
-                    Writer.Write(v.Arguments?.Count ?? 0);
-                    Writer.Write(", NULL, 0, NULL\n\t\t");
-                    break;
-                case Function f:
-                    Writer.Write(f is Constructor ? "REFLETION_CONSTRUCTOR" : "REFLETION_FUNCTION");
-                    Writer.Write(", ");
-                    Writer.Write(f.Type?.ID ?? 0);
-                    Writer.Write(", ");
-                    Writer.Write(f.TypeArray ? 1 : 0);
-                    Writer.Write(", ");
-                    Writer.Write(f is Constructor ctor && ctor.Type.Access == AccessType.STATIC ? "NULL" : f.Real);
-                    Writer.Write(", ");
-                    if (f.Parameters != null) {
-                        arg = true;
-                        Writer.Write(f.Parameters?.Children?.Count ?? 0);
-                        Writer.Write(",\n\t\t\t(ReflectionArgument[");
-                        Writer.Write(f.Parameters.Children.Count);
-                        Writer.Write("]) {");
-                        for (int p = 0; p < f.Parameters.Children.Count; p++) {
-                            var param = f.Parameters.Children[p] as Parameter;
-                            if (p > 0) Writer.Write(", ");
-                            Writer.Write("\n\t\t\t\t(ReflectionArgument){\"");
-                            Writer.Write(param.Token.Value);
-                            Writer.Write("\", ");
-                            Writer.Write(param.Type.ID);
-                            Writer.Write(", ");
-                            Writer.Write(param.Arguments?.Count ?? 0);
-                            Writer.Write("}");
+            if (child is Constructor c && c.Type.IsNative) {
+
+            } else {
+                Writer.Write(", .kind = ");
+                var arg = false;
+                switch (child) {
+                    case Property p:
+                        Writer.Write("REFLETION_PROPERTY, .id = ");
+                        Writer.Write(p.Type.ID);
+                        Writer.Write(", .array = 0, .function = NULL, .count = 0, .args = NULL");
+                        break;
+                    case Indexer x:
+                        Writer.Write("REFLETION_INDEXER, .id = ");
+                        Writer.Write(x.Type.ID);
+                        Writer.Write(", .array = ");
+                        Writer.Write(x.Index.Type.ID);
+                        Writer.Write(", .function = NULL, .count = 0, .args = NULL\n\t\t");
+                        break;
+                    case Field v:
+                        Writer.Write("REFLETION_FIELD, .id = ");
+                        Writer.Write(v.Type.ID);
+                        Writer.Write(", .array = ");
+                        Writer.Write(v.Arguments?.Count ?? 0);
+                        Writer.Write(", .function = NULL, .count = 0, .args = NULL\n\t\t");
+                        break;
+                    case Function f:
+                        Writer.Write(f is Constructor ? "REFLETION_CONSTRUCTOR" : "REFLETION_FUNCTION");
+                        Writer.Write(", .id = ");
+                        Writer.Write(f.Type?.ID ?? 0);
+                        Writer.Write(", .array = ");
+                        Writer.Write(f.TypeArray ? 1 : 0);
+                        Writer.Write(", .function = ");
+                        Writer.Write(f is Constructor ctor && ctor.Type.Access == AccessType.STATIC ? "NULL" : f.Real);
+                        Writer.Write(", .count = ");
+                        if (f.Parameters != null) {
+                            arg = true;
+                            Writer.Write(f.Parameters?.Children?.Count ?? 0);
+                            Writer.Write(",\n\t\t\t.args = (ReflectionArgument[");
+                            Writer.Write(f.Parameters.Children.Count);
+                            Writer.Write("]) {");
+                            for (int p = 0; p < f.Parameters.Children.Count; p++) {
+                                var param = f.Parameters.Children[p] as Parameter;
+                                if (p > 0) Writer.Write(", ");
+                                Writer.Write("\n\t\t\t\t(ReflectionArgument){ .name = \"");
+                                Writer.Write(param.Token.Value);
+                                Writer.Write("\", .id = ");
+                                Writer.Write(param.Type.ID);
+                                Writer.Write(", .array = ");
+                                Writer.Write(param.Arguments?.Count ?? 0);
+                                Writer.Write("}");
+                            }
+                            Writer.Write("\n\t\t\t},");
+                        } else {
+                            Writer.Write("0, .args = NULL\n\t\t");
                         }
-                        Writer.Write("\n\t\t\t},");
-                    } else {
-                        Writer.Write("0, NULL\n\t\t");
-                    }
-                    break;
-            }
-            if (arg) {
-                Writer.Write("\n\t\t");
+                        break;
+                }
+                if (arg) {
+                    Writer.Write("\n\t\t");
+                }
             }
             Writer.Write("}");
         }
@@ -403,19 +446,47 @@ namespace Run {
             SaveMain();
             Writer.WriteLine("}");
             Writer.WriteLine("""
-                void sighandler(int signum) {
-                   printf("Caught signal %d, coming out...\n", signum);
-                   exit(1);
+                void interruptHandler(int signum) {
+                   perror("Caught Interrupt");
+                }
+                void illegalHandler(int signum) {
+                   perror("Caught Illegal");
+                }
+                void faultHandler(int signum) {
+                   perror("Caught Fault Segment");
+                }
+                void abortHandler(int signum) {
+                   perror("Caught Abort");
+                }
+                void terminateHandler(int signum) {
+                   perror("Caught Terminate");
+                }
+
+                int main(int argc, char *argv[]) {
+                    if(signal(SIGINT, interruptHandler)== SIG_ERR) {
+                        printf("Error while setting a signal handler.\n");
+                    }
+                    if(signal(SIGILL, illegalHandler)== SIG_ERR) {
+                        printf("Error while setting a signal handler.\n");
+                    }
+                    if(signal(SIGSEGV, faultHandler)== SIG_ERR) {
+                        printf("Error while setting a signal handler.\n");
+                    }
+                    if(signal(SIGABRT, abortHandler)== SIG_ERR) {
+                        printf("Error while setting a signal handler.\n");
+                    }
+                    if(signal(SIGTERM, terminateHandler)== SIG_ERR) {
+                        printf("Error while setting a signal handler.\n");
+                    }
+                    ArenaInit(64 * 1024);
+                    run_initializer(argc, argv);
+                    ArenaClose();
+                    return 0;
                 }
                 """);
-            Writer.WriteLine("int main(int argc, char *argv[]) {");
-            Writer.WriteLine("\trun_initializer(argc, argv);");
-            Writer.WriteLine("\treturn 0;");
-            Writer.WriteLine("}");
-            Writer.WriteLine();
         }
         void SaveMain() {
-            Writer.WriteLine("setStaticClassMembersValues();");
+            Writer.WriteLine("set_static_class_members_values();");
             if (Builder.Program.Main == null) return;
             if (Builder.Program.Main.Parameters != null) {
                 Writer.Write("\tif(argc<");
@@ -524,14 +595,12 @@ namespace Run {
             Writer.Write("\trun_main(");
             if (Builder.Program.Main.Parameters != null) {
                 for (int i = 0; i < Builder.Program.Main.Parameters.Children.Count; i++) {
-                    if (i > 0) {
-                        Writer.Write(", ");
-                    }
                     var p = Builder.Program.Main.Parameters.Children[i] as Parameter;
                     Writer.Write(p.Real);
+                    Writer.Write(", ");
                 }
             }
-            Writer.WriteLine(");");
+            Writer.WriteLine("arena->region);");
         }
         #region classes
         private void SaveClassesInitializers() {
@@ -540,13 +609,12 @@ namespace Run {
                 if (cls.IsNative || cls.Access == AccessType.STATIC) {
                     continue;
                 }
-                if (cls.Usage == 0) continue;
                 Writer.Write(cls.Real);
                 Writer.Write("* ");
                 Writer.Write(cls.Real);
                 Writer.Write("_initializer(");
                 Writer.Write(cls.Real);
-                Writer.WriteLine("* this);");
+                Writer.WriteLine("* this, Region* __region__);");
             }
 
             Writer.WriteLine();
@@ -555,16 +623,15 @@ namespace Run {
                 if (cls.IsNative || cls.Access == AccessType.STATIC) {
                     continue;
                 }
-                if (cls.Usage == 0) continue;
                 Writer.Write(cls.Real);
                 Writer.Write("* ");
                 Writer.Write(cls.Real);
                 Writer.Write("_initializer(");
                 Writer.Write(cls.Real);
-                Writer.WriteLine("* this) {");
+                Writer.WriteLine("* this, Region* __region__) {");
                 if (cls.IsBased) {
                     Writer.Write(cls.Base.Real);
-                    Writer.WriteLine("_initializer(this);");
+                    Writer.WriteLine("_initializer(this, __region__);");
                 }
                 if (cls.Children != null) {
                     for (int i = 0; i < cls.Children.Count; i++) {
@@ -589,56 +656,48 @@ namespace Run {
         void SaveStaticClassMembersValues(Class cls) {
             if (cls.Children == null) return;
             foreach (var child in cls.Children) {
-                if (child is Field f && f.Access == AccessType.STATIC) {
-                    SaveRegisterVar(f, "0");
+                if (child is Field f && f.Access == AccessType.STATIC && f.Initializer != null) {
+                    Writer.Write(f.Real);
+                    Writer.Write(" = ");
+                    Save(f.Initializer);
+                    Writer.WriteLine(";");
+                    SaveRegisterVar(f);
                     Writer.WriteLine(";");
                 }
             }
         }
         void SaveStaticClassMembersPrototypes(Class cls) {
             if (cls.Children == null) return;
+            bool newLine = false;
             foreach (var child in cls.Children) {
                 if (child is Field f && f.Access == AccessType.STATIC) {
                     f.Real = cls.Token.Value + f.Real;
-                    Save(f, false);
+                    Save(f, false, false);
                     Writer.WriteLine(";");
-                    //if (f.Initializer != null) {
-                    //    SaveRegisterVar(f);
-                    //} else {
-                    //    SaveRegisterVar(f, "0");
-                    //}
+                    newLine = true;
                 }
+            }
+            if (newLine) {
+                Writer.WriteLine();
             }
         }
         void SaveClassesDeclarations() {
             foreach (var cls in Builder.Classes.Values.OrderBy(e => e.BaseCount)) {
                 SaveStaticClassMembersPrototypes(cls);
-                if (cls.IsEnum || cls.IsPrimitive == false) continue;
-                if (cls.IsNative || cls.Access == AccessType.STATIC) {
-                    continue;
-                }
-                if (cls.Usage == 0) continue;
-                SaveClassDeclaration(cls);
-            }
-            foreach (var cls in Builder.Classes.Values.OrderBy(e => e.BaseCount)) {
                 if (cls.IsEnum || cls.IsPrimitive) continue;
                 if (cls.IsNative || cls.Access == AccessType.STATIC) {
                     continue;
                 }
-                if (cls.Usage == 0) continue;
                 SaveClassDeclaration(cls);
             }
-            Writer.WriteLine();
-
-            Writer.WriteLine("void setStaticClassMembersValues() {");
+            Writer.WriteLine("void set_static_class_members_values() {");
             foreach (var cls in Builder.Classes.Values) {
                 SaveStaticClassMembersValues(cls);
             }
             Writer.WriteLine("}");
         }
         void SaveClassDeclaration(Class cls) {
-            Writer.WriteLine();
-            Writer.Write("type ");
+            Writer.Write("typedef struct ");
             Writer.Write(cls.Real);
             Writer.WriteLine(" {");
             if (cls.IsBased) {
@@ -679,7 +738,7 @@ namespace Run {
             }
             Writer.Write("} ");
             Writer.Write(cls.Real);
-            Writer.Write(";\n");
+            Writer.WriteLine(";\n");
 
             if (cls.Children != null) {
                 foreach (var child in cls.Children) {
@@ -695,7 +754,6 @@ namespace Run {
             foreach (var cls in Builder.Classes.Values) {
                 if (cls.IsEnum) continue;
                 foreach (var property in cls.FindChildren<GetterSetter>()) {
-                    if (property.Usage == 0) continue;
                     if (property.SimpleKind != PropertyKind.None) {
                         continue;
                     }
@@ -716,8 +774,10 @@ namespace Run {
             foreach (var cls in Builder.Classes.Values.OrderBy(e => e.BaseCount)) {
                 if (cls.IsNative || cls.Access == AccessType.STATIC) continue;
                 if (cls.IsEnum) continue;
-                if (cls.Usage == 0) continue;
-                Writer.Write("type ");
+                if (cls.Token.Value == "ReflectionType") continue;
+                if (cls.Token.Value == "ReflectionMember") continue;
+                if (cls.Token.Value == "ReflectionArgument") continue;
+                Writer.Write("typedef struct ");
                 Writer.Write(cls.Real);
                 Writer.Write(" ");
                 Writer.Write(cls.Real);
@@ -737,7 +797,7 @@ namespace Run {
                     continue;
                 }
                 if (enm.Usage == 0) {
-                    continue;
+                    //continue;
                 }
                 Writer.Write("#define ");
                 Writer.Write(enm.Real);
@@ -757,7 +817,7 @@ namespace Run {
                     continue;
                 }
                 if (enm.Usage == 0) {
-                    continue;
+                    //continue;
                 }
                 foreach (EnumMember child in enm.Children) {
                     Save(child);
@@ -775,18 +835,19 @@ namespace Run {
         bool SaveFunctionsPrototypes() {
             bool ok = false;
             foreach (Function func in Builder.Functions.Values) {
-                if (func.IsNative || (func is Constructor ctor && ctor.Type.Access == AccessType.STATIC)) {
+                if (func.IsNative || (func is Constructor ctor && (ctor.Type.IsNative || ctor.Type.Access == AccessType.STATIC))) {
                     continue;
                 }
                 if (func.Usage == 0) {
                     if (func.Parent is Class cls) {
                         if (cls.Usage == 0 || cls.IsNative) {
-                            continue;
+                            //continue;
                         }
                     } else {
-                        continue;
+                        //continue;
                     }
                 }
+                if (func.Parent is GetterSetter) continue;
                 SaveDeclaration(func);
                 Writer.WriteLine(";");
                 ok = true;
@@ -796,16 +857,16 @@ namespace Run {
         }
         void SaveFunctionsImplementations() {
             foreach (Function func in Builder.Functions.Values) {
-                if (func.IsNative || (func is Constructor ctor && ctor.Type.Access == AccessType.STATIC)) {
+                if (func.IsNative || (func is Constructor ctor && (ctor.Type.IsNative || ctor.Type.Access == AccessType.STATIC))) {
                     continue;
                 }
                 if (func.Usage == 0) {
                     if (func.Parent is Class cls) {
                         if (cls.Usage == 0 || cls.IsNative) {
-                            continue;
+                            //continue;
                         }
                     } else {
-                        continue;
+                        //continue;
                     }
                 }
                 if (func.Parent is GetterSetter) continue;
@@ -868,12 +929,12 @@ namespace Run {
                     Writer.Write(" = ");
                     Writer.Write(ctor.Real);
                     Writer.Write("(NEW(");
-                    Writer.Write(ctor.Type.Real);
+                    Writer.Write(ctor.Type.Real ?? ctor.Type.Token.Value);
                     Writer.Write(",1,");
                     Writer.Write(ctor.Type.ID);
                     Writer.Write("),");
                     Save(exp.Right);
-                    Writer.Write(')');
+                    Writer.Write(", NULL)");
                     return true;
             }
             return false;
@@ -942,12 +1003,49 @@ namespace Run {
             Writer.Write("this");
         }
 
-        void SaveBlock(Block block) {
+        bool CheckSavePosition(bool savePosition, Block block) {
+            if (savePosition) {
+                savePosition = block.Contains<IsExpression>(true);
+            }
+            if (savePosition) {
+                SaveMapPosition(block);
+            }
+            return savePosition;
+        }
+
+        bool AddRegion(Block block) {
+            bool add = false;
+            if (block.Children.Count > 0) {
+                if ((add = block.Contains(a => (a is Var v && v.Initializer is NewExpression), false))) {
+                    Writer.Write("__current_region__");
+                    //Writer.Write(block.Token.Position);
+                    Writer.WriteLine(" = RegionAdd(__current_region__, __current_region__->capacity);");
+                }
+            }
+            return add;
+        }
+
+        void CloseOrResetRegion(bool added, Block block) {
+            if (added == false) return;
+
+            if (block is not For) {
+                Writer.Write("RegionClose(__current_region__");
+            } else {
+                Writer.Write("RegionReset(__current_region__");
+            }
+            //Writer.Write(block.Token.Position);
+            Writer.WriteLine(");");
+        }
+
+        void SaveBlock(Block block, bool savePosition = true) {
             if (block.Defers.Count > 0) {
                 Writer.Write("int __DEFER_STAGE__");
                 Writer.Write(block.Defers[0].ID);
                 Writer.WriteLine(" = 0;");
             }
+            bool addRegion = AddRegion(block);
+            savePosition = CheckSavePosition(savePosition, block);
+
             for (int i = 0; i < block.Children.Count; i++) {
                 var child = block.Children[i];
                 if (child is Parameter) continue;
@@ -955,27 +1053,34 @@ namespace Run {
                 Writer.Write(child is Expression ? ";\n" : "");
                 Writer.Write(child is Var ? ";\n" : "");
             }
-            if (block.Defers.Count > 0) {
-                Writer.Write("__DEFER__");
-                Writer.Write(block.Defers[0].ID);
-                Writer.WriteLine(":\n;");
-                var ID = block.Defers[0].ID;
-                for (int i = block.Defers.Count - 1; i >= 0; i--) {
-                    var defer = block.Defers[i];
-                    Writer.Write("if (__DEFER_STAGE__");
-                    Writer.Write(ID);
-                    Writer.Write(" >= ");
-                    Writer.Write(defer.Token.Value);
-                    Writer.WriteLine(") {");
-                    SaveBlock(defer);
-                    Writer.WriteLine("}");
-                }
-                if (block.Parent is Block p && p is not Class) {
-                    if (p.Defers.Count > 0) {
-                        Writer.Write("goto __DEFER__");
-                        Writer.Write(p.Defers[0].ID);
-                        Writer.WriteLine(";");
-                    }
+
+            CloseOrResetRegion(addRegion, block);
+            if (savePosition) RestoreMapPosition(block);
+
+            SaveDefers(block);
+        }
+
+        private void SaveDefers(Block block) {
+            if (block.Defers.Count == 0) return;
+            Writer.Write("__DEFER__");
+            Writer.Write(block.Defers[0].ID);
+            Writer.WriteLine(":\n;");
+            var ID = block.Defers[0].ID;
+            for (int i = block.Defers.Count - 1; i >= 0; i--) {
+                var defer = block.Defers[i];
+                Writer.Write("if (__DEFER_STAGE__");
+                Writer.Write(ID);
+                Writer.Write(" >= ");
+                Writer.Write(defer.Token.Value);
+                Writer.WriteLine(") {");
+                SaveBlock(defer);
+                Writer.WriteLine("}");
+            }
+            if (block.Parent is Block p && p is not Class) {
+                if (p.Defers.Count > 0) {
+                    Writer.Write("goto __DEFER__");
+                    Writer.Write(p.Defers[0].ID);
+                    Writer.WriteLine(";");
                 }
             }
         }
@@ -1021,7 +1126,7 @@ namespace Run {
                 case GetterSetter g: Save(g); break;
                 case Function f: Save(f); break;
                 case Var v: Save(v); break;
-                case Block b: SaveBlock(b); break;
+                case Block b: SaveBlock(b, false); break;
             }
         }
 
@@ -1068,6 +1173,10 @@ namespace Run {
                     }
                 }
             }
+            if (started) {
+                Writer.Write(", ");
+            }
+            Writer.Write("Region* __region__");
             Writer.Write(")");
         }
 
@@ -1096,6 +1205,7 @@ namespace Run {
                 return;
             }
             Writer.WriteLine(" {");
+            Writer.WriteLine("Region* __current_region__ = __region__;");
             if (exp is Constructor) {
                 var cls = exp.Parent as Class;
                 if (cls.IsBased) {
@@ -1114,7 +1224,7 @@ namespace Run {
                     }
                 }
                 Writer.Write(cls.Real);
-                Writer.WriteLine("_initializer(this);");
+                Writer.WriteLine("_initializer(this,__current_region__);");
             }
             if (exp.HasVariadic) {
                 SaveVariadic(exp);
@@ -1138,9 +1248,7 @@ namespace Run {
                 SaveReturnType(exp);
                 Writer.WriteLine(" __RETURN__ = 0;");
             }
-            SaveMapPosition(exp);
             SaveBlock(exp);
-            RestoreMapPosition(exp);
             if (exp is Constructor) {
                 Writer.WriteLine("return this;");
             } else {
@@ -1169,7 +1277,7 @@ namespace Run {
             var vary = exp.Parameters.Children.Last() as Parameter;
             Writer.Write("_array* ");
             Writer.Write(vary.Real);
-            Writer.Write(" = array_this_i32_i32(array_initializer(NEW(_array, 1, 2)), (_i32){0, sizeof(");
+            Writer.Write(" = array_this_i32_i32(array_initializer(NEW(_array, 1, 2, __current_region__)), (_i32){0, sizeof(");
             SaveType(vary.Type);
             Writer.Write(")}, len");
             Writer.Write(vary.Real);
@@ -1201,9 +1309,9 @@ namespace Run {
             foreach (var child in exp.Parameters.Children) {
                 if (child is Parameter param && param.IsMember) {
                     Writer.Write("this->");
-                    Writer.Write(param.Token.Value);
+                    Writer.Write(param.Real);
                     Writer.Write(" = ");
-                    Writer.Write(param.Token.Value);
+                    Writer.Write(param.Real);
                     Writer.WriteLine(";");
                 }
             }
@@ -1246,7 +1354,10 @@ namespace Run {
             Writer.Write(')');
         }
 
-        void Save(Var exp, bool saveInitializer = true) {
+        void Save(Var exp, bool saveInitializer = true, bool registerVar = true) {
+            if (exp.IsConst) {
+                Writer.Write("const ");
+            }
             if (exp is Parameter p && p.Constraints != null) {
                 if (p.IsVariadic) {
                     Writer.Write("int len");
@@ -1284,10 +1395,10 @@ namespace Run {
             }
             Writer.Write(exp.Real ?? exp.Token.Value);
             if (saveInitializer && exp.FindParent<Function>() != null) {
-                SaveInitializer(exp, exp.TypeArray);
+                SaveInitializer(exp, exp.TypeArray, registerVar);
             }
         }
-        void SaveInitializer(Var exp, bool array = true) {
+        void SaveInitializer(Var exp, bool array = true, bool registerVar = true) {
             if (array && exp.Arguments != null) {
                 Writer.Write('[');
                 if (exp.Arguments.Count > 0) {
@@ -1295,22 +1406,21 @@ namespace Run {
                 }
                 Writer.Write(']');
             } else if (exp.Initializer != null && exp.Parent is not Class) {
-                Writer.WriteLine(";");
-                SaveRegisterVar(exp);
+                Writer.Write(" = ");
+                Save(exp.Initializer);
+                if (exp.NeedRegister || registerVar) {
+                    Writer.WriteLine(";");
+                    SaveRegisterVar(exp);
+                }
             }
         }
 
         void SaveRegisterVar(Var exp, string value = null) {
-            Writer.Write("REGISTER_VAR(");
-            Writer.Write(exp.Real);
-            Writer.Write(", ");
-            if (exp.Initializer != null) {
-                Save(exp.Initializer);
-            } else if (value != null) {
-                Writer.Write(value);
-            } else {
-                Writer.Write("0");
+            Writer.Write("REGISTER(");
+            if (exp.Type.IsPrimitive) {
+                Writer.Write("&");
             }
+            Writer.Write(exp.Real);
             Writer.Write(", ");
             Writer.Write(exp.Type.ID);
             Writer.Write(")");
@@ -1332,14 +1442,13 @@ namespace Run {
         void Save(Else exp) {
             Writer.Write("else ");
             if (exp.Condition != null) {
-
-                //base.Save(writer, builder);
-            } else {
-                Writer.WriteLine('{');
-                //SaveBlock(writer, builder);
-                SaveBlock(exp);
-                Writer.WriteLine('}');
+                Writer.Write("if(");
+                Save(exp.Condition);
+                Writer.Write(") ");
             }
+            Writer.WriteLine('{');
+            SaveBlock(exp);
+            Writer.WriteLine('}');
         }
 
         void Save(Scope exp) {
@@ -1419,7 +1528,7 @@ namespace Run {
         void SaveBegin(For exp) {
             var var = exp.Start as Var;
             Writer.Write("for(");
-            Save(var);
+            Save(var, true, false);
             Writer.Write(";;");
             Writer.Write(var.Real);
             Writer.Write("++");
@@ -1465,21 +1574,25 @@ namespace Run {
         void SaveStartRanged(For exp) {
             var range = exp.Start as RangeExpression;
             Writer.Write("for(int range_");
-            Writer.Write(range.Left.Token.Position);
+            Writer.Write(range.Token.Position);
             Writer.Write(" = ");
             Save(range.Left);
             Writer.Write("; range_");
-            Writer.Write(range.Left.Token.Position);
+            Writer.Write(range.Token.Position);
             Writer.Write(" < ");
             Save(range.Right);
             Writer.Write("; range_");
-            Writer.Write(range.Left.Token.Position);
+            Writer.Write(range.Token.Position);
             Writer.Write("++");
         }
 
         void SaveDefaultFor(For exp) {
             Writer.Write("for(");
-            Save(exp.Start);
+            if (exp.Start is Var v) {
+                Save(v, true, false);
+            } else {
+                Save(exp.Start);
+            }
             Writer.Write(';');
             Save(exp.Condition);
             Writer.Write(';');
@@ -1502,10 +1615,23 @@ namespace Run {
             Writer.Write("++");
         }
 
+        void SaveUntil(For exp) {
+            Writer.Write("for(int range_");
+            Writer.Write(exp.Token.Position);
+            Writer.Write(" = 0; range_");
+            Writer.Write(exp.Token.Position);
+            Writer.Write(" < ");
+            Save(exp.Condition);
+            Writer.Write("; range_");
+            Writer.Write(exp.Token.Position);
+            Writer.Write("++");
+        }
+
         void Save(For exp) {
             SaveMapPosition(exp);
             switch (exp.Stage) {
                 case -1: Writer.Write("while(1"); break;
+                case 0 when exp.HasRange: SaveUntil(exp); break;
                 case 0 when exp.Start is RangeExpression: SaveStartRanged(exp); break;
                 case 0 when exp.Start is Expression: SaveWhile(exp); break;
                 case 0 when exp.Start is Var && exp.Condition == null: SaveBegin(exp); break;
@@ -1520,21 +1646,18 @@ namespace Run {
             if (exp.Children.Count > 0) {
                 Writer.WriteLine(") {");
                 SaveBlock(exp);
-                RestoreMapPosition(exp);
                 Writer.WriteLine("}");
-                RestoreMapPosition(exp);
             } else {
                 Writer.WriteLine(");");
             }
+            RestoreMapPosition(exp);
         }
 
         void Save(If exp) {
             Writer.Write("if(");
             Save(exp.Condition);
             Writer.WriteLine(") {");
-            SaveMapPosition(exp);
             SaveBlock(exp);
-            RestoreMapPosition(exp);
             Writer.WriteLine("}");
         }
 
@@ -1552,28 +1675,23 @@ namespace Run {
                     Writer.Write(id.Token.Value);
                     Writer.WriteLine(");");
                 }
-                Writer.Write("delete ");
+                Writer.Write("DELETE(");
                 Save(child);
                 if (i < exp.Block.Children.Count - 1) {
                 }
-                Writer.WriteLine(';');
+                Writer.WriteLine(");");
             }
         }
 
         void Save(NewExpression exp) {
             if (exp.Content is ArrayCreationExpression array) {
-                Writer.Write("(");
-                Writer.Write(array.Type.Real);
-                if (array.Type.IsPrimitive == false) {
-                    Writer.Write("*");
-                }
-                Writer.Write("*)malloc(sizeof(");
-                Writer.Write(array.Type.Real);
-                if (array.Type.IsPrimitive == false) {
-                    Writer.Write("*");
-                }
-                Writer.Write(") * ");
+                Writer.Write("NEW(");
+                Writer.Write(array.Type.Real ?? array.Type.Token.Value);
+                Writer.Write(",");
                 Save(array.Content);
+                Writer.Write(",");
+                Writer.Write(array.Type.ID);
+                Writer.Write(",__current_region__");
             } else if (exp.Content is ConstructorExpression ctor) {
                 Save(ctor, exp.Type);
             } else {
@@ -1585,14 +1703,15 @@ namespace Run {
         void Save(CallExpression call, Class type) {
             Writer.Write(call.Function.Real);
             Writer.Write("(NEW(");
-            Writer.Write(type.Real);
+            Writer.Write(type.Real ?? type.Token.Value);
             Writer.Write(",1,");
             Writer.Write(type.ID);
-            Writer.Write(")");
+            Writer.Write(", __current_region__)");
             foreach (var value in call.Arguments) {
                 Writer.Write(',');
                 Save(value);
             }
+            Writer.Write(", __current_region__");
         }
 
         void Save(IdentifierExpression exp) {
@@ -1607,9 +1726,7 @@ namespace Run {
                     case GetterSetter p: {
                             if (p.Access != AccessType.STATIC && (exp.Parent is not DotExpression || exp.Parent is DotExpression dot && dot.Left == exp)) {
                                 Writer.Write(p.Getter.Real);
-                                Writer.Write("(");
-                                Writer.Write("this");
-                                Writer.Write(")");
+                                Writer.Write("(this)");
                                 return;
                             }
                         }
@@ -1622,11 +1739,23 @@ namespace Run {
         }
 
         void Save(IsExpression exp) {
-            Writer.Write("((");
-            Save(exp.Left);
-            Writer.Write(").reflection->id==reflection");
-            Writer.Write(exp.Right.Type.Real);
-            Writer.Write(".id)");
+            switch (exp.Left) {
+                case LiteralExpression:
+                    Writer.Write(exp.Left.Type.ID);
+                    Writer.Write(" == ");
+                    Writer.Write(exp.Right.Type.ID);
+                    break;
+                case IdentifierExpression:
+                    Writer.Write("IS(");
+                    if (exp.Left.Type.IsPrimitive) {
+                        Writer.Write("&");
+                    }
+                    Save(exp.Left);
+                    Writer.Write(", ");
+                    Writer.Write(exp.Right.Type.ID);
+                    Writer.Write(")");
+                    break;
+            }
         }
 
         void Save(AsExpression exp) {
@@ -1680,6 +1809,8 @@ namespace Run {
         }
 
         void Save(CallExpression exp) {
+            if (exp == null || exp.Function == null) return;
+
             if (exp.Function.IsNative && exp.Function.NativeNames?.Count >= 2) {
                 SaveNative(exp);
                 return;
@@ -1700,7 +1831,7 @@ namespace Run {
                     Writer.Write(", ");
                 }
             }
-            Writer.Write(')');
+            Writer.Write(",__current_region__)");
         }
 
         void Save(Default exp) {

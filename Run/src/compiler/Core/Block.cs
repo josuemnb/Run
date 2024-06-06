@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.IO;
 
 namespace Run {
@@ -58,13 +59,36 @@ namespace Run {
             Add<Annotation>().Parse();
         }
 
-        public IEnumerable<T> FindChildren<T>() where T : AST {
+        public bool Contains(Func<AST, bool> predicate, bool recursive = true) {
+            for (int i = 0; i < Children.Count; i++) {
+                var child = Children[i];
+                if(predicate(child)) return true;
+                if (recursive && child is Block block) {
+                    if (block.Contains(predicate, recursive)) return true;
+                }
+            }
+            return false;
+        }
+
+        public bool Contains<T>(bool recursive = true) where T : AST {
+            for (int i = 0; i < Children.Count; i++) {
+                var child = Children[i];
+                if (child is T t) return true;
+                if (recursive && child is Block block) {
+                    if (block.Contains<T>(recursive)) return true;
+                }
+            }
+            return false;
+        }
+
+        public IEnumerable<T> FindChildren<T>(bool recursive = true) where T : AST {
+            if (Children == null || Children.Count == 0) yield break;
             //if (this is T t1) yield return t1;
             for (int i = 0; i < Children.Count; i++) {
                 var child = Children[i];
                 if (child is T t) yield return t;
-                if (child is Block block) {
-                    foreach (var r in block.FindChildren<T>()) {
+                if (recursive && child is Block block) {
+                    foreach (var r in block.FindChildren<T>(recursive)) {
                         yield return r;
                     }
                 }

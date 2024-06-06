@@ -1,4 +1,5 @@
-﻿using System.IO;
+﻿using System.Diagnostics;
+using System.IO;
 
 namespace Run {
     public class Indexer : GetterSetter {
@@ -9,7 +10,6 @@ namespace Run {
                 Program.AddError(Scanner.Current, Error.InvalidExpression);
                 return;
             }
-
             if (GetIndex() == false) return;
             if (CheckOthersIndexes(cls) == false) return;
             if (GetReturnType() == false) return;
@@ -94,6 +94,10 @@ namespace Run {
             };
             Type.SetParent(this);
             return true;
+        }
+
+        public override string ToString() {
+            return Parent.Token.Value + " [" + Getter?.ToString() + "] [" + Setter?.ToString() + "]";
         }
     }
 }

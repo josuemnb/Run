@@ -32,6 +32,10 @@ namespace Run {
                             Stage++;
                             goto again;
                         }
+                    } else if (Scanner.Expect("..")) {
+                        HasRange = true;
+                        Condition = ExpressionHelper.Expression(this);
+                        goto beginOfBlock;
                     } else {
                         current = Start = ExpressionHelper.Expression(this);
                         if (current is Iterator || current is RangeExpression) {

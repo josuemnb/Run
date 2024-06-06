@@ -49,8 +49,8 @@ namespace Run {
         }
     }
     public class Class : Block {
-        public static int CounterID = 1;
-        public int ID;
+        public static int CounterID = 0;
+        public int ID = -1;
         public int Usage = 0;
         public bool IsTemporary;
         public bool IsEnum;

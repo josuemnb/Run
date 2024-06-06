@@ -37,6 +37,17 @@ namespace Run {
             defer.Parse();
         }
 
+        internal static void ParseConst(Block parent) {
+            if (parent is not Class) {
+                var v = parent.Add<Var>();
+                v.IsConst = true;
+                v.Parse();
+                return;
+            }
+            parent.Program.AddError(parent.Scanner.Current, Error.OnlyInModuleScope);
+            parent.Scanner.SkipLine();
+        }
+
         internal static void ParseVar(Block parent) {
             if (parent is null) {
                 parent.Program.AddError(parent.Scanner.Current, Error.OnlyInFunctionBlock);
@@ -55,12 +66,6 @@ namespace Run {
                     parent.Add<Var>().Parse();
                     break;
             }
-            //if (parent is Class cls && cls.IsNative) {
-            //    parent.Program.AddError(parent.Scanner.Current, Error.NativeClassNotAllowed);
-            //    parent.Scanner.SkipLine();
-            //    return;
-            //}
-            //parent.Add<Var>().Parse();
             if (parent.Scanner.Expect(',')) {
                 goto again;
             }
@@ -83,6 +88,7 @@ namespace Run {
                 case "if": CheckAndParse<If>(parent, () => parent.FindParent<Function>() != null); break;
                 case "for": CheckAndParse<For>(parent, () => parent.FindParent<Function>() != null); break;
                 case "var": ParseVar(parent); break;
+                case "const": ParseConst(parent); break;
                 case "enum": ParseEnum(parent); break;
                 case "function": ParseFunction(parent); break;
                 case "goto": CheckAndParse<Goto>(parent, () => parent.FindParent<Function>() != null); break;

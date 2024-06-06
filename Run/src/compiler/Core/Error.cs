@@ -72,6 +72,8 @@
         public static readonly string PropertyIsNotWritable = "Property is not writable";
         public static readonly string PropertyIsNoReadable = "Property is no readable";
         public static readonly string OnlyInsideForDeclaration = "Only inside a For declaration";
+        public static readonly string ExpectingInitializer = "Expecting Initializer";
+        public static readonly string NotPossibleToReassingConstantVariable = "Not possible to reassign constant variable";
 
         public override string ToString() {
             if (Token == null || Token.Value == null) {

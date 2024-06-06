@@ -1,7 +1,12 @@
-main(test:chars) {
-	var b = 0
-	for 0..i32.max {
-		b++
+main {
+	var var = 100
+	const const = "1000"
+	for ..var {
+		for ..var {
+			if const is string {
+				print("const é um inteiro\n")
+			}
+		} 
 	}
-	print("%d\n",b)
+	print("fim\n")
 }

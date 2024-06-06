@@ -1,5 +1,7 @@
 ﻿using System;
+using System.Diagnostics;
 using System.Linq;
+using System.Reflection.Emit;
 using System.Text;
 
 namespace Run {
@@ -50,7 +52,7 @@ namespace Run {
                 return;
             }
             if (ast.Validated) return;
-            if (ast is not Property && ast is ValueType vt && vt.Type != null && vt.Type.IsTemporary == false) return;
+            if (ast is not Property && ast is not Indexer && ast is ValueType vt && vt.Type != null && vt.Type.IsTemporary == false) return;
             switch (ast) {
                 case Operator op: Validate(op); break;
                 case Function f: Validate(f); break;
@@ -59,6 +61,7 @@ namespace Run {
                 case Property property: Validate(property); break;
                 case Switch sw: Validate(sw); break;
                 case Base b: Validate(b); break;
+                case Indexer idx: Validate(idx); break;
                 case Enum @enum: Validate(@enum); break;
                 case Var v: Validate(v); break;
                 case Else el: Validate(el); break;
@@ -87,6 +90,7 @@ namespace Run {
                 case TernaryExpression ter: Validate(ter); break;
                 case UnaryExpression un: Validate(un); break;
                 case DotExpression dot: Validate(dot); break;
+                case AssignExpression assign: Validate(assign); break;
                 case BinaryExpression bin: Validate(bin); break;
                 case ObjectExpression obj: Validate(obj); break;
                 case ParentesesExpression p: Validate(p); break;
@@ -95,8 +99,18 @@ namespace Run {
             }
         }
 
+        void Validate(AssignExpression assign) {
+            Validate(assign as BinaryExpression);
+            if (assign.Left is IdentifierExpression id && id.From is Var v && v.IsConst) {
+                Builder.Program.AddError(id.Token, Error.NotPossibleToReassingConstantVariable);
+            }
+        }
+
         void Validate(IsExpression @is) {
             Validate(@is.Left);
+            if (@is.Left is IdentifierExpression id && id.From is Var v) {
+                v.NeedRegister = true;
+            }
             Validate(@is.Right);
             //@is.Type = @is.Right.Type;
             @is.Type = Builder.Bool;

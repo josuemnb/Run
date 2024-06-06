@@ -23,7 +23,7 @@ type pointer { }
 type i64 { 
 	function toString:chars => NumberHelper.toString(this, 21)
 	static var max:i64 => 9223372036854775807
-	static var min:i64 => -9223372036854775808
+	static var min:i64 => -9223372036854775807
 }
 
 @primitive
@@ -80,7 +80,7 @@ type i8 {
 @number
 type u64 { 
 	function toString:chars => NumberHelper.toString(this as u64, 21)	
-	static var max:u64 => 18446744073709551615
+	static var max:u64 => 18446744073709551614
 	static var min:u64 => 0
 }
 

@@ -4,9 +4,12 @@ namespace Run {
     public class Global : Var { }
     public class Field : Var {
     }
+
     public class Var : Array {
         public Expression Initializer;
         public int Usage = 0;
+        public bool IsConst;
+        public bool NeedRegister = false;
 
         public void Parse(bool full) {
             if (full) {
@@ -28,6 +31,10 @@ namespace Run {
                     if ((eol = Scanner.IsEOL()) == false && Scanner.Expect(';') == false) {
                         Program.AddError(Scanner.Current, Error.ExpectingEndOfLine);
                     }
+                } else if (IsConst) {
+                    Program.AddError(Scanner.Current, Error.ExpectingInitializer);
+                    Scanner.SkipLine();
+                    eol = true;
                 } else if ((eol = Scanner.IsEOL()) == false && Scanner.Expect(';') == false) {
                     Program.AddError(Scanner.Current, Error.ExpectingEndOfLine);
                 }

@@ -11,12 +11,18 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-		<PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.8.0" />
-		<PackageReference Include="MSTest.TestAdapter" Version="3.1.1" />
-		<PackageReference Include="MSTest.TestFramework" Version="3.1.1" />
+		<PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.10.0" />
+		<PackageReference Include="MSTest.TestAdapter" Version="3.4.3" />
+		<PackageReference Include="MSTest.TestFramework" Version="3.4.3" />
 	</ItemGroup>
 
 	<ItemGroup>
+		<None Update="lib\arena.h">
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
+		<None Update="lib\arena.h">
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
 		<None Update="lib\numberHelper.run">
 			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</None>
@@ -130,6 +136,9 @@
 		</None>
 		<None Update="lib\system.run">
 			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
+		<None Update="src\Run_C.h">
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</None>
 		<None Update="tcc\libtcc.dll">
 			<CopyToOutputDirectory>Never</CopyToOutputDirectory>
