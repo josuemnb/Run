@@ -8,7 +8,7 @@ using primitives
 type chars { }
 
 type string: object {
-	var value:i8[]
+	var value:i8[] 
 	var hash = -1
 	var _size = -1
 
