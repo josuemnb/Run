@@ -1,7 +1,5 @@
 ﻿using System;
-using System.Diagnostics;
 using System.Linq;
-using System.Reflection.Emit;
 using System.Text;
 
 namespace Run {
@@ -69,6 +67,7 @@ namespace Run {
                 case For f: Validate(f); break;
                 case Class cls: Validate(cls); break;
                 case Delete del: Validate(del); break;
+                case Extension ex: break;
                 case Block b: Validate(b); break;
                 case Return ret: Validate(ret); break;
                 case TypeOf tp: Validate(tp); break;
@@ -99,10 +98,39 @@ namespace Run {
             }
         }
 
-        void Validate(AssignExpression assign) {
-            Validate(assign as BinaryExpression);
-            if (assign.Left is IdentifierExpression id && id.From is Var v && v.IsConst) {
-                Builder.Program.AddError(id.Token, Error.NotPossibleToReassingConstantVariable);
+        //void Validate(Extension ex) {
+        //    if (ex.Validated) return;
+
+        //    var cls = Builder.Find(ex.Token.Value);
+        //    if (cls == null) {
+        //        Builder.Program.AddError(ex.Token, Error.UnknownType);
+        //        return;
+        //    }
+        //    Validate(cls);
+        //    ex.Type = cls;
+        //    Validate(ex as Block);
+        //}
+
+        void Validate(AssignExpression bin) {
+            if (ValidateBinaryMembers(bin) == false) return;
+
+            if (bin.Left is IdentifierExpression id && id.From is Var v) {
+                if (v.IsConst) {
+                    Builder.Program.AddError(id.Token, Error.NotPossibleToReassingConstantVariable);
+                    return;
+                }
+            }
+            if (AreCompatible(bin.Left, bin.Right) == false) {
+                Builder.Program.AddError(bin.Right.Token ?? bin.Left.Token ?? bin.Token, Error.IncompatibleType);
+                return;
+            }
+            switch (bin.Token.Family) {
+                case TokenType.LOGICAL:
+                    bin.Type = Builder.Bool;
+                    return;
+                default:
+                    bin.Type = bin.Right.Type;
+                    return;
             }
         }
 
@@ -201,6 +229,7 @@ namespace Run {
         }
         void Validate(Function func) {
             if (func.Validated) return;
+
             Validate(func as Block);
             Validate(func.Type);
         }
@@ -469,7 +498,7 @@ namespace Run {
                     ne.Content = new ConstructorExpression(ne, false) {
                         Token = var.Initializer.Token,
                         Function = ctor,
-                        Arguments = new() { var.Initializer },
+                        Arguments = [var.Initializer],
                         Type = ctor.Type,
                     };
                     var.Initializer = ne;
@@ -606,19 +635,33 @@ namespace Run {
             }
             dot.Type = dot.Right.Type;
         }
-        void Validate(BinaryExpression bin) {
+
+        bool ValidateBinaryMembers(BinaryExpression bin) {
+            if (bin.Validated) return false;
+
             if (bin.Left == null || bin.Right == null) {
                 bin.Program.AddError(bin.Token, Error.InvalidExpression);
-                return;
+                return false;
             }
-            if (bin.Validated) return;
             bin.Validated = true;
             Validate(bin.Left);
             Validate(bin.Right);
+            if (ChangeToImplicit(bin.Left) is NewExpression nl) {
+                bin.Left = nl;
+            }
+            if (ChangeToImplicit(bin.Right) is NewExpression nr) {
+                bin.Right = nr;
+            }
+            return true;
+        }
+
+        void Validate(BinaryExpression bin) {
+            if (ValidateBinaryMembers(bin) == false) return;
             if (bin.Left.Type != null && bin.Left.Type.HasOperators) {
                 if (Replacer.Operator(bin, Builder)) return;
             }
-            if (AreCompatible(Builder, bin.Left, bin.Right) == false) {
+
+            if (AreCompatible(bin.Left, bin.Right) == false) {
                 Builder.Program.AddError(bin.Right.Token ?? bin.Left.Token ?? bin.Token, Error.IncompatibleType);
                 return;
             }
@@ -630,6 +673,30 @@ namespace Run {
                     bin.Type = bin.Right.Type;
                     return;
             }
+        }
+
+        NewExpression ChangeToImplicit(Expression from) {
+            if (from.Type == null) {
+                return null;
+            }
+            if (Builder.Program.Implicits.TryGetValue(from.Type.Token.Value, out var imp) && imp is Constructor ctor) {
+                Validate(ctor);
+                var exp = new NewExpression(from) {
+                    QualifiedName = ctor.Real,
+                    Type = ctor.Type,
+                    Token = ctor.Token,
+                    Validated = true,
+                };
+                exp.Content = new ConstructorExpression(exp, false) {
+                    Validated = true,
+                    Token = from.Token,
+                    Function = ctor,
+                    Arguments = [from],
+                    Type = ctor.Type,
+                };
+                return exp;
+            }
+            return null;
         }
 
         Function FindInClass(string name, Class cls, bool maybeIsThis = true) {
@@ -880,7 +947,7 @@ namespace Run {
             if (index.Left.Type.HasIndexers) {
                 foreach (var item in index.Left.Type.Children) {
                     if (item is Indexer i) {
-                        if (AreCompatible(Builder, index.Right, i.Index)) {
+                        if (AreCompatible(index.Right, i.Index)) {
                             index.Type = i.Type;
                             Validate(i);
                             Replacer.Indexer(index, i);
@@ -960,7 +1027,7 @@ namespace Run {
             }
             Validate(ternary.True);
             Validate(ternary.False);
-            if (AreCompatible(Builder, ternary.False, ternary.True) == false) {
+            if (AreCompatible(ternary.False, ternary.True) == false) {
                 Builder.Program.AddError(ternary.Token, Error.IncompatibleType);
                 return;
             }
@@ -1003,8 +1070,8 @@ namespace Run {
             }
             return buff.ToString();
         }
-        public static bool AreCompatible(ValueType vt1, ValueType vt2) => AreCompatible(null, vt1, vt2);
-        public static bool AreCompatible(Builder builder, ValueType vt1, ValueType vt2) {
+        //public static bool AreCompatible(ValueType vt1, ValueType vt2) => AreCompatible(null, vt1, vt2);
+        public static bool AreCompatible(ValueType vt1, ValueType vt2) {
             var t1 = vt1?.Type ?? null;
             var t2 = vt2?.Type ?? null;
             if (t1 == t2) return true;
@@ -1028,6 +1095,7 @@ namespace Run {
             if (t1.Token.Value == t2.Token.Value) {
                 return true;
             }
+
             return false;
         }
         public static bool AreCompatible(Class t1, Class t2) {

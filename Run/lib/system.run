@@ -21,3 +21,5 @@ function realloc(p:pointer,s:i32):pointer
 
 @native(free($p))
 function free(p:pointer):i32
+
+using object

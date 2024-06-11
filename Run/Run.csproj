@@ -23,8 +23,14 @@
 		<None Update="lib\arena.h">
 		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</None>
+		<None Update="lib\builtin.h">
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
 		<None Update="lib\numberHelper.run">
 			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
+		<None Update="lib\object.run">
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</None>
 		<None Update="next\ast.run">
 			<CopyToOutputDirectory>Always</CopyToOutputDirectory>

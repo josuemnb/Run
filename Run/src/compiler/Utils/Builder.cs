@@ -61,21 +61,36 @@ namespace Run {
             Program.Add<Using>().LoadModule("builtin");
         }
 
-        public Class Find(string name/*, out AST from*/) {
-            //from = null;
+        public Class Find(string name) {
             if (Classes.TryGetValue(name, out Class cls)) {
                 return cls;
             }
-            //if (Enums.TryGetValue(name, out Enum en)) {
-            //    from = en;
-            //    return en;
-            //}
             return null;
         }
 
-        //public Class Find(string name) => Find(name, out _);
-
         void RegisterFunctions() {
+            foreach (var extension in Program.FindChildren<Extension>()) {
+                if (Classes.TryGetValue(extension.Token.Value, out Class cls) == false) {
+                    Program.AddError(extension.Token, Error.UnknownType);
+                    continue;
+                }
+                foreach (var child in extension.Children) {
+                    switch (child) {
+                        case Function func:
+                            func.Parent = cls;
+                            cls.Children.Add(func);
+                            break;
+                        case GetterSetter property:
+                            property.Parent = cls;
+                            cls.Children.Add(property);
+                            break;
+                        default:
+                            Program.AddError(child.Token, Error.InsideExtensionScopeOnlyFunctionsAreAllowed);
+                            break;
+                    }
+                }
+                extension.Children.Clear();
+            }
             foreach (var func in Program.FindChildren<Function>()) {
                 RegisterFunction(func);
             }

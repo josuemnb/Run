@@ -1,0 +1,12 @@
+interface IStringable {
+	function toString(): string { }
+}
+
+interface IHashable {
+	function hashCode(): i32 { }
+}
+
+type object: IStringable, IHashable {
+	function hashCode:i32 => -1
+	function toString(): string => "Object"
+}

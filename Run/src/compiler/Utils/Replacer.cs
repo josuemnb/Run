@@ -85,7 +85,7 @@ namespace Run {
                         binary.Program.AddError(binary.Token, Error.OnlyOneParameterAllowedInOperator);
                         break;
                     }
-                    if (op.Parameters.Children[0] is Parameter p && p.Type != null && Validator.AreCompatible(builder, p, binary.Right) == false) {
+                    if (op.Parameters.Children[0] is Parameter p && p.Type != null && Validator.AreCompatible(p, binary.Right) == false) {
                         binary.Program.AddError(binary.Token, Error.IncompatibleType);
                         break;
                     }

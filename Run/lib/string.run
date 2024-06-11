@@ -7,8 +7,9 @@ using primitives
 @native(char)
 type chars { }
 
-type string {
+type string: object {
 	var value:i8[]
+	var hash = -1
 	var _size = -1
 
 	property size:i32 {
@@ -49,14 +50,15 @@ type string {
 		value = s.value	
 	}
 
-	property empty:bool => size == 0
+	property empty: bool => size == 0
 
-	function indexOf(s:string):i32 => indexOf(s,0)
+	function indexOf(s:string): i32 => indexOf(s,0)
 
-	function indexOf(s:string, start:i32):i32 {
+	function indexOf(s:string, start:i32): i32 {
 		for var i=start;i<size - s.size;i++ {
 			if s[0]!=value[i] => continue
 			if s.size == 1 => return i
+
 			var found = true
 			for var l=1;l<s.size;l++ {
 				if s[l]!=value[i + l] {
@@ -74,6 +76,7 @@ type string {
 		for var i = start; i >= 0; i-- {
 			if s[0] != value[i] => continue
 			if s.size == 1 => return i
+
 			var found = true
 			for var l=1; l < s.size; l++ {
 				if s[l] != value[i + l] {
@@ -99,12 +102,7 @@ type string {
 
 	function substring(start:i32):string => substring(start,size)
 
-	function substring(start:i32, end:i32):string {
-		var len = (end - start)
-		var newString = new string(len)
-		copy(newString.value as pointer,this.value as pointer,len, start)
-		return newString
-	}
+	function substring(start:i32, end:i32):string =>  new string((this.value + start) as chars, end - start)
 
 	//function split(sep:string):array {
 	//	var result = new array(sizeof(string))
@@ -122,21 +120,18 @@ type string {
 	//function clone:string => new string(this)
 
 	function equals(s:string):bool {
+		if s == null => return false
 		if size != s.size => return false
-		for var i=0;i<size;i++  {
-			if value[i] != s.value[i] {
-				return false
-			}
-		}
+
+		for var i..size => if value[i] != s.value[i] => return false
 		return true
 	}
 
 	property hashCode:i32 {
 		get {
-			var hash = 1
-			var sz = size
-			for var i=0;i<sz;i++ {
-				hash = (hash * 31) + value[i]
+			if hash == -1 {
+				hash = 17
+				for var i..size => hash = (hash * 31) + value[i]
 			}
 			return hash
 		}
@@ -144,11 +139,7 @@ type string {
 
 	function repeat(count:i32): string {
 		var s = new string()
-		for var i=0;i<count;i++ {
-			for var l=0;l<size;l++ {
-				s.value[(i * size) + l] = value[l]
-			}
-		}
+		for var i..count => for var l..size => s.value[(i * size) + l] = value[l]
 		return s
 	}
 

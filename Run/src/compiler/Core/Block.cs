@@ -51,8 +51,7 @@ namespace Run {
         }
 
         private void ParseAnnotation() {
-            var func = FindParent<Function>();
-            if (func != null) {
+            if (FindParent<Function>() != null) {
                 Program.AddError(Scanner.Current, Error.AnnotationsNotAllowedInsideFunctionScope);
                 return;
             }
@@ -62,7 +61,7 @@ namespace Run {
         public bool Contains(Func<AST, bool> predicate, bool recursive = true) {
             for (int i = 0; i < Children.Count; i++) {
                 var child = Children[i];
-                if(predicate(child)) return true;
+                if (predicate(child)) return true;
                 if (recursive && child is Block block) {
                     if (block.Contains(predicate, recursive)) return true;
                 }

@@ -38,13 +38,13 @@ namespace Run {
         }
 
         internal static void ParseConst(Block parent) {
-            if (parent is not Class) {
+            if (parent is Function || parent is Module) {
                 var v = parent.Add<Var>();
                 v.IsConst = true;
                 v.Parse();
                 return;
             }
-            parent.Program.AddError(parent.Scanner.Current, Error.OnlyInModuleScope);
+            parent.Program.AddError(parent.Scanner.Current, Error.OnlyInFunctionOrModuleScope);
             parent.Scanner.SkipLine();
         }
 
@@ -90,7 +90,6 @@ namespace Run {
                 case "var": ParseVar(parent); break;
                 case "const": ParseConst(parent); break;
                 case "enum": ParseEnum(parent); break;
-                case "function": ParseFunction(parent); break;
                 case "goto": CheckAndParse<Goto>(parent, () => parent.FindParent<Function>() != null); break;
                 case "main": CheckAndParse<Main>(parent, () => parent is Module); break;
                 case "this": ParseThis(parent); break;
@@ -98,16 +97,18 @@ namespace Run {
                 case "break": CheckAndParse<Break>(parent, () => parent.FindParent<For>() != null); break;
                 case "defer": ParseDefer(parent); break;
                 case "label": CheckAndParse<Label>(parent, () => parent.FindParent<Function>() != null); break;
-                case "delete": CheckAndParse<Delete>(parent, () => parent.FindParent<Function>() != null); break;
                 case "using": CheckAndParse<Using>(parent, () => parent is Module); break;
+                case "delete": CheckAndParse<Delete>(parent, () => parent.FindParent<Function>() != null); break;
                 case "return": CheckAndParse<Return>(parent, () => parent.FindParent<Function>() != null); break;
                 case "static": AST.CurrentAccess = AccessType.STATIC; break;
-                case "indexer": CheckAndParse<Indexer>(parent, () => parent is Class); break;
                 case "switch": CheckAndParse<Switch>(parent, () => parent.FindParent<Function>() != null); break;
+                case "indexer": CheckAndParse<Indexer>(parent, () => parent is Class); break;
                 case "library": CheckAndParse<Library>(parent, () => parent is Module); break;
                 case "continue": CheckAndParse<Continue>(parent, () => parent.FindParent<For>() != null); break;
+                case "function": ParseFunction(parent); break;
                 case "operator": CheckAndParse<Operator>(parent, () => parent is Class cls && cls.IsNumber == false); break;
-                case "property": CheckAndParse<Property>(parent, () => parent is Class); break;
+                case "property": CheckAndParse<Property>(parent, () => parent is Class || parent is Extension); break;
+                case "extension": CheckAndParse<Extension>(parent, () => parent is Module); break;
                 case "interface": CheckAndParse<Interface>(parent, () => parent is Module); break;
                 case "namespace": CheckAndParse<Namespace>(parent, () => parent.Scanner.Line == 1); break;
                 default: return false;
@@ -128,7 +129,9 @@ namespace Run {
                 parent.Program.AddError(parent.Scanner.Current, Error.OnlyInClassOrModuleScope);
                 return;
             }
-            parent.Add<Function>().Parse();
+            var function = parent.Add<Function>();
+            if (parent is Extension) function.IsExtension = true;
+            function.Parse();
         }
 
         internal static void CheckModifier(Token token, Block parent) {

@@ -53,6 +53,7 @@
         public static readonly string OnlyOneParameterAllowedInOperator = "Only One Parameter Allowed in Operator Definition";
         public static readonly string OnlyInClassScope = "Only Allowed inside of Class Scope";
         public static readonly string OnlyInClassOrModuleScope = "Only Allowed inside of Class or Module Scope";
+        public static readonly string OnlyInFunctionOrModuleScope = "Only Allowed inside of Function or Module Scope";
         public static readonly string OnlyInModuleScope = "Only Allowed inside of Module Scope";
         public static readonly string OnlyInFunctionScope = "Only Allowed Inside of Function Scope";
         public static readonly string OnlyInFunctionBlock = "Only Allowed Inside of Block";
@@ -74,6 +75,7 @@
         public static readonly string OnlyInsideForDeclaration = "Only inside a For declaration";
         public static readonly string ExpectingInitializer = "Expecting Initializer";
         public static readonly string NotPossibleToReassingConstantVariable = "Not possible to reassign constant variable";
+        public static readonly string InsideExtensionScopeOnlyFunctionsAreAllowed = "Inside extension scope only functions are allowed";
 
         public override string ToString() {
             if (Token == null || Token.Value == null) {

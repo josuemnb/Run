@@ -1,12 +1,34 @@
-main {
-	var var = 100
-	const const = "1000"
-	for ..var {
-		for ..var {
-			if const is string {
-				print("const é um inteiro\n")
-			}
-		} 
+type class: object {
+	var name: string
+
+	function hashCode(): i32 => this as i32
+
+	function ok() { 
+		print("ok")
 	}
-	print("fim\n")
+	function toString(): string => name
+}
+
+extension class {
+	function done {
+		print("done")
+	}
+
+	property prop: string {
+		get {
+			return name
+		}
+		set {
+			name = value
+			print(name)
+		}
+	}
+}
+
+main {
+	var ex = new class()
+	var num = 10
+	ex.name = "John " + "Doe"
+	print(ex.name)
+	ex.done()
 }

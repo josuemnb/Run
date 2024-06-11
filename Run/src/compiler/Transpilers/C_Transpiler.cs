@@ -1,10 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Drawing;
 using System.IO;
 using System.Linq;
-using System.Text;
 
 namespace Run {
     public class C_Transpiler : Transpiler {
@@ -140,6 +138,10 @@ namespace Run {
                 Arguments = "-I" + Path.GetDirectoryName(location) + "/lib " + (Builder.Program.HasMain ? "-o " : "-c ") + "..\\" + Builder.Program.Token.Value + ".exe " + Destination + " -w " + (libraries.Count > 0 ? " -L" + string.Join(" -L", libraries.Select(Path.GetDirectoryName)) + "\"" + " -l\"" + string.Join(" -l\"", libraries.Select(Path.GetFileName)) : ""),
                 WindowStyle = ProcessWindowStyle.Hidden,
             };
+            //var info = new ProcessStartInfo("gcc") {
+            //    Arguments = "-o " + Builder.Program.Token.Value + ".exe " + Destination + " -std=c99 -w -O2 -fpermissive",
+            //    WindowStyle = ProcessWindowStyle.Hidden,
+            //};
             var proc = Process.Start(info);
             proc.WaitForExit();
             if (proc.ExitCode != 0) {
@@ -254,7 +256,7 @@ namespace Run {
             Writer.Write(children.Count);
             if (children.Count > 0) {
                 Writer.Write(", .children = \n\t(ReflectionMember[");
-                Writer.Write(children.Count);
+                //Writer.Write(children.Count);
                 Writer.Write("]) {");
                 bool started = false;
                 foreach (var child in children) {
@@ -278,7 +280,7 @@ namespace Run {
             }
         }
         void SaveReflectionMember(AST child, Class cls) {
-            Writer.WriteLine("\n\t\t(ReflectionMember){");
+            Writer.WriteLine("\n\t\t{");
             Writer.Write("\t\t\t.name = \"");
             Writer.Write(child.Token.Value);
             Writer.Write("\", .offset = ");
@@ -329,12 +331,12 @@ namespace Run {
                             arg = true;
                             Writer.Write(f.Parameters?.Children?.Count ?? 0);
                             Writer.Write(",\n\t\t\t.args = (ReflectionArgument[");
-                            Writer.Write(f.Parameters.Children.Count);
+                            //Writer.Write(f.Parameters.Children.Count);
                             Writer.Write("]) {");
                             for (int p = 0; p < f.Parameters.Children.Count; p++) {
                                 var param = f.Parameters.Children[p] as Parameter;
                                 if (p > 0) Writer.Write(", ");
-                                Writer.Write("\n\t\t\t\t(ReflectionArgument){ .name = \"");
+                                Writer.Write("\n\t\t\t\t{ .name = \"");
                                 Writer.Write(param.Token.Value);
                                 Writer.Write("\", .id = ");
                                 Writer.Write(param.Type.ID);
@@ -611,7 +613,7 @@ namespace Run {
                 }
                 Writer.Write(cls.Real);
                 Writer.Write("* ");
-                Writer.Write(cls.Real);
+                Writer.Write(cls.Token.Value);
                 Writer.Write("_initializer(");
                 Writer.Write(cls.Real);
                 Writer.WriteLine("* this, Region* __region__);");
@@ -625,12 +627,12 @@ namespace Run {
                 }
                 Writer.Write(cls.Real);
                 Writer.Write("* ");
-                Writer.Write(cls.Real);
+                Writer.Write(cls.Token.Value);
                 Writer.Write("_initializer(");
                 Writer.Write(cls.Real);
                 Writer.WriteLine("* this, Region* __region__) {");
                 if (cls.IsBased) {
-                    Writer.Write(cls.Base.Real);
+                    Writer.Write(cls.Base.Token.Value);
                     Writer.WriteLine("_initializer(this, __region__);");
                 }
                 if (cls.Children != null) {
@@ -847,7 +849,7 @@ namespace Run {
                         //continue;
                     }
                 }
-                if (func.Parent is GetterSetter) continue;
+                //if (func.Parent is GetterSetter) continue;
                 SaveDeclaration(func);
                 Writer.WriteLine(";");
                 ok = true;
@@ -1219,11 +1221,11 @@ namespace Run {
                         }
                     }
                     if (found == false) {
-                        Writer.Write(cls.Base.Real);
-                        Writer.WriteLine("_this(this);");
+                        //Writer.Write(cls.Base.Token.Value);
+                        //Writer.WriteLine("_this(this,__current_region__);");
                     }
                 }
-                Writer.Write(cls.Real);
+                Writer.Write(cls.Token.Value);
                 Writer.WriteLine("_initializer(this,__current_region__);");
             }
             if (exp.HasVariadic) {
