@@ -1,0 +1,17 @@
+// VERY IMPORTANT
+// DO NOT CHANGE THIS FILE
+
+using system
+using primitives
+using numberHelper
+using string
+//using reflection
+using array
+
+@native(puts($s))
+@header(stdio.h)
+func puts(s:string) 
+
+@native(printf($fmt,$args))
+@header(stdio.h)
+func print(fmt:string, ...args:any) 

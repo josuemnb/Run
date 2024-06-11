@@ -5,42 +5,42 @@ using io
 
 static type Console {
 
-	static func readLine():string => readLine(128)
+	static function readLine():string => readLine(128)
 
-	static func readLine(size:i32):string {
+	static function readLine(size:i32):string {
 		var buffer = new u8[size]
 		fgets(buffer as pointer, size, getIO(0))
 		return buffer as string
 	}
 
-	static func writeLine(value:string) {
+	static function writeLine(value:string) {
 		fwrite(value as pointer, value.size, 1, getIO(1))
 		fwrite("\n" as pointer, 1, 1, getIO(1))
 	}
 
-	static func write(value:string) => fwrite(value as pointer, value.size, 1, getIO(1))
+	static function write(value:string) => fwrite(value as pointer, value.size, 1, getIO(1))
 
-	static func write(value:i32) => write(value.toString())
+	static function write(value:i32) => write(value.toString())
 
-	static func writeLine(value:i32) => writeLine(value.toString())
+	static function writeLine(value:i32) => writeLine(value.toString())
 
-	static func write(value:i64) => write(value.toString())
+	static function write(value:i64) => write(value.toString())
 
-	static func writeLine(value:i64) => writeLine(value.toString())
+	static function writeLine(value:i64) => writeLine(value.toString())
 
-	static func write(value:i16) => write(value.toString())
+	static function write(value:i16) => write(value.toString())
 
-	static func writeLine(value:i16) => writeLine(value.toString())
+	static function writeLine(value:i16) => writeLine(value.toString())
 
-	static func write(value:u32) => write(value.toString())
+	static function write(value:u32) => write(value.toString())
 
-	static func writeLine(value:u32) => writeLine(value.toString())
+	static function writeLine(value:u32) => writeLine(value.toString())
 
-	static func write(value:u64) => write(value.toString())
+	static function write(value:u64) => write(value.toString())
 
-	static func writeLine(value:u64) => writeLine(value.toString())
+	static function writeLine(value:u64) => writeLine(value.toString())
 
-	static func write(value:u16) => write(value.toString())
+	static function write(value:u16) => write(value.toString())
 
-	static func writeLine(value:u16) => writeLine(value.toString())
+	static function writeLine(value:u16) => writeLine(value.toString())
 }

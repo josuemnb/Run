@@ -5,27 +5,27 @@ using "../io"
 
 @native(fopen($path,$mode))
 @header(stdio.h)
-func fopen(path:string,mode:string) :FILE
+function fopen(path:string,mode:string) :FILE
 
 @native(fclose($fp):i32)
 @header(stdio.h)
-func fclose(fp:FILE) :i32
+function fclose(fp:FILE) :i32
 
 @native(fseek($fp,$offset,$from):i32)
 @header(stdio.h)
-func fseek(fp:FILE,offset:i32,from:i32):i32
+function fseek(fp:FILE,offset:i32,from:i32):i32
 
 @native(ftell($fp):i32)
 @header(stdio.h)
-func ftell(fp:FILE):i32
+function ftell(fp:FILE):i32
 
 @native(fgets($buffer,$size,$fp))
 @header(stdio.h)
-func fgets(buffer:pointer,size:i32,fp:FILE):pointer
+function fgets(buffer:pointer,size:i32,fp:FILE):pointer
 
 @native(fflush($fp):i32)
 @header(stdio.h)
-func fflush(fp:FILE):i32
+function fflush(fp:FILE):i32
 
 @native(DIR)
 @header(dirent.h)
@@ -53,13 +53,13 @@ type FileBase {
 
 	property ok:bool => opened && ended != 2
 
-	func close {
+	function close {
 		if opened == false => return
 		opened = false
 		fclose(fp)
 	}
 
-	func begin => if ok => fseek(fp,0,0)
+	function begin => if ok => fseek(fp,0,0)
 
-	func end =>if ok => fseek(fp,0,2)
+	function end =>if ok => fseek(fp,0,2)
 }

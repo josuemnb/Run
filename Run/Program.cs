@@ -1,12 +1,16 @@
-﻿namespace Run {
+﻿using System;
+using System.Diagnostics;
+
+namespace Run {
     class Run {
-        static void Main() {
-            var program = new Program("next/main");
+        static void Main(params string[] args) {
+            var program = new Program(args.Length > 0 ? args[0] : "next/program");
             program.Parse();
-            //program.Print();
-            program.Build();
+            program.Build(true);
             program.Validate();
             program.Transpile();
+            program.Compile();
+            program.PrintResults();
         }
     }
 }

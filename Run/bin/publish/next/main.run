@@ -1,0 +1,29 @@
+@primitive
+@number
+@native(int)
+type i32 {
+}
+
+
+type test {
+	func f1:test {
+	}
+	func f2:test {
+	}
+	func f3(i:i32):test {
+	}
+	var a:i32
+	var c:test
+}
+
+main {
+	var t = new test()
+	t.f1()
+	t.f1().c.f3(10).a
+	//t
+	//f1(t)
+	//f1(t).c
+	//f2(f1(t).c)
+	//f2(f1(t).c).a
+	//f2(f1(t).c).a
+}

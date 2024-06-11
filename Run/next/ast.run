@@ -32,9 +32,9 @@ type AST {
     static var CurrentModifier: AccessModifier
     static var CurrentAccess: AccessType
 
-    func parse { }
+    function parse { }
 
-    func setAccess { 
+    function setAccess { 
         if (CurrentAccess == AccessType.STATIC) {
             if typeof(this) == typeof(Module) {
                 program.addError(scanner.current, Error.InvalidAccessDefinition)
@@ -47,7 +47,7 @@ type AST {
         CurrentAccess = AccessType.INSTANCE
     }
 
-    func setParent(.parent) {
+    function setParent(.parent) {
         module = parent.module
         program = parent.program
         scanner = parent.scanner
@@ -62,18 +62,18 @@ type AST {
 		}
 	}
 
-    func findName(name: string): AST {
+    function findName(name: string): AST {
         if (token != null) && (token.value == name) || (real == name) => return this
         if parent != null => return parent.findName(name)
         return null
     }
 
-    func findChildren(name: string): AST {
+    function findChildren(name: string): AST {
         if (token != null) && (token.value == name) => return this
         return null
     }
 
-    func getName(tok: Token): bool {
+    function getName(tok: Token): bool {
         tok = scanner.getName(false)
         if (tok == null) {
             program.addError(scanner.current, Error.ExpectingName)
@@ -82,13 +82,13 @@ type AST {
         return true
     }
 
-    func save(writer:FileWriter, builder:Builder) {
+    function save(writer:FileWriter, builder:Builder) {
         if token!=null => writer.write(token.value)
     }
 
-    func print => print(this)
+    function print => print(this)
 
-    static func print(ast: AST) {
+    static function print(ast: AST) {
         if (ast != null) => Console.writeLine(" ".repeat(ast.level * 2) + "[" + typeof(ast).name + "] " + ast.token.value)
     }
 }

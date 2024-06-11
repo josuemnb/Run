@@ -87,219 +87,219 @@ type GLFWmonitorfun { }
 type GLFWjoystickfun { }
 
 @native(glfwInit)
-func glfwInit():bool 
+function glfwInit():bool 
 
 @native(glfwCreateWindow($width,$height,$title)
-func glfwCreateWindow(width:i32, height:i32, title:string,m:pointer, s:pointer):GLFWwindow
+function glfwCreateWindow(width:i32, height:i32, title:string,m:pointer, s:pointer):GLFWwindow
 
-func glfwCreateWindow(width:i32, height:i32, title:string):GLFWwindow => glfwCreateWindow(width, height, title, null, null)
+function glfwCreateWindow(width:i32, height:i32, title:string):GLFWwindow => glfwCreateWindow(width, height, title, null, null)
 
 @native(glfwMakeContextCurrent($window))
-func glfwMakeContextCurrent(window:GLFWwindow)
+function glfwMakeContextCurrent(window:GLFWwindow)
 
 @native(glfwWindowShouldClose($window))
-func glfwWindowShouldClose(window:GLFWwindow):bool
+function glfwWindowShouldClose(window:GLFWwindow):bool
 
 @native(glfwSwapBuffers($window))
-func glfwSwapBuffers(window:GLFWwindow)
+function glfwSwapBuffers(window:GLFWwindow)
 
 @native(glfwPollEvents)
-func glfwPollEvents()
+function glfwPollEvents()
 
 @native(glfwTerminate)
-func glfwTerminate()
+function glfwTerminate()
 
 @native(glfwSetKeyCallback($window,$callback))
-func glfwSetKeyCallback(window:GLFWwindow, callback:GLFWkeyfun)
+function glfwSetKeyCallback(window:GLFWwindow, callback:GLFWkeyfun)
 
 @native(glfwSetCursorPosCallback($window,$callback))
-func glfwSetCursorPosCallback(window:GLFWwindow, callback:GLFWcursorposfun)
+function glfwSetCursorPosCallback(window:GLFWwindow, callback:GLFWcursorposfun)
 
 @native(glfwSetMouseButtonCallback($window,$callback))
-func glfwSetMouseButtonCallback(window:GLFWwindow, callback:GLFWmousebuttonfun)
+function glfwSetMouseButtonCallback(window:GLFWwindow, callback:GLFWmousebuttonfun)
 
 @native(glfwSetScrollCallback($window,$callback))
-func glfwSetScrollCallback(window:GLFWwindow, callback:GLFWscrollfun)
+function glfwSetScrollCallback(window:GLFWwindow, callback:GLFWscrollfun)
 
 @native(glfwSetCharCallback($window,$callback))
-func glfwSetCharCallback(window:GLFWwindow, callback:GLFWcharfun)
+function glfwSetCharCallback(window:GLFWwindow, callback:GLFWcharfun)
 
 @native(glfwSetWindowCloseCallback($window,$callback))
-func glfwSetWindowCloseCallback(window:GLFWwindow, callback:GLFWwindowclosefun)
+function glfwSetWindowCloseCallback(window:GLFWwindow, callback:GLFWwindowclosefun)
 
 @native(glfwSetWindowFocusCallback($window,$callback))
-func glfwSetWindowFocusCallback(window:GLFWwindow, callback:GLFWwindowfocusfun)
+function glfwSetWindowFocusCallback(window:GLFWwindow, callback:GLFWwindowfocusfun)
 
 @native(glfwSetWindowIconifyCallback($window,$callback))
-func glfwSetWindowIconifyCallback(window:GLFWwindow, callback:GLFWwindowiconifyfun)
+function glfwSetWindowIconifyCallback(window:GLFWwindow, callback:GLFWwindowiconifyfun)
 
 @native(glfwSetWindowPosCallback($window,$callback))
-func glfwSetWindowPosCallback(window:GLFWwindow, callback:GLFWwindowposfun)
+function glfwSetWindowPosCallback(window:GLFWwindow, callback:GLFWwindowposfun)
 
 @native(glfwSetWindowSizeCallback($window,$callback))
-func glfwSetWindowSizeCallback(window:GLFWwindow, callback:GLFWwindowsizefun)
+function glfwSetWindowSizeCallback(window:GLFWwindow, callback:GLFWwindowsizefun)
 
 @native(glfwSetWindowRefreshCallback($window,$callback))
-func glfwSetWindowRefreshCallback(window:GLFWwindow, callback:GLFWwindowrefreshfun)
+function glfwSetWindowRefreshCallback(window:GLFWwindow, callback:GLFWwindowrefreshfun)
 
 @native(glfwSetFramebufferSizeCallback($window,$callback))
-func glfwSetFramebufferSizeCallback(window:GLFWwindow, callback:GLFWframebuffersizefun)
+function glfwSetFramebufferSizeCallback(window:GLFWwindow, callback:GLFWframebuffersizefun)
 
 @native(glfwGetPrimaryMonitor)
-func glfwGetPrimaryMonitor():GLFWmonitor
+function glfwGetPrimaryMonitor():GLFWmonitor
 
 @native(glfwGetVideoModes($monitor,$count))
-func glfwGetVideoModes(monitor:GLFWmonitor, count:i32):GLFWvidmode
+function glfwGetVideoModes(monitor:GLFWmonitor, count:i32):GLFWvidmode
 
 @native(glfwGetVideoMode($monitor))
-func glfwGetVideoMode(monitor:GLFWmonitor):GLFWvidmode
+function glfwGetVideoMode(monitor:GLFWmonitor):GLFWvidmode
 
 @native(glfwGetGammaRamp($monitor))
-func glfwGetGammaRamp(monitor:GLFWmonitor):GLFWgammaramp
+function glfwGetGammaRamp(monitor:GLFWmonitor):GLFWgammaramp
 
 @native(glfwSetGammaRamp($monitor,$ramp))
-func glfwSetGammaRamp(monitor:GLFWmonitor, ramp:GLFWgammaramp)
+function glfwSetGammaRamp(monitor:GLFWmonitor, ramp:GLFWgammaramp)
 
 @native(glfwDefaultWindowHints)
-func glfwDefaultWindowHints()
+function glfwDefaultWindowHints()
 
 @native(glfwWindowHint($target,$hint))
-func glfwWindowHint(target:i32, hint:i32)
+function glfwWindowHint(target:i32, hint:i32)
 
 @native(glfwDestroyWindow($window))
-func glfwDestroyWindow(window:GLFWwindow)
+function glfwDestroyWindow(window:GLFWwindow)
 
 @native(glfwGetWindowAttrib($window,$attrib))
-func glfwGetWindowAttrib(window:GLFWwindow, attrib:i32):i32
+function glfwGetWindowAttrib(window:GLFWwindow, attrib:i32):i32
 
 @native(glfwSetWindowUserPointer($window,$pointer))
-func glfwSetWindowUserPointer(window:GLFWwindow, pointer:GLFWwindow)
+function glfwSetWindowUserPointer(window:GLFWwindow, pointer:GLFWwindow)
 
 @native(glfwGetWindowUserPointer($window))
-func glfwGetWindowUserPointer(window:GLFWwindow):GLFWwindow
+function glfwGetWindowUserPointer(window:GLFWwindow):GLFWwindow
 
 @native(glfwSetWindowPos($window,$xpos,$ypos))
-func glfwSetWindowPos(window:GLFWwindow, xpos:i32, ypos:i32)
+function glfwSetWindowPos(window:GLFWwindow, xpos:i32, ypos:i32)
 
 @native(glfwGetWindowPos($window,$xpos,$ypos))
-func glfwGetWindowPos(window:GLFWwindow, xpos:i32, ypos:i32)
+function glfwGetWindowPos(window:GLFWwindow, xpos:i32, ypos:i32)
 
 @native(glfwSetWindowSize($window,$width,$height))
-func glfwSetWindowSize(window:GLFWwindow, width:i32, height:i32)
+function glfwSetWindowSize(window:GLFWwindow, width:i32, height:i32)
 
 @native(glfwGetWindowSize($window,$width,$height))
-func glfwGetWindowSize(window:GLFWwindow, width:i32, height:i32)
+function glfwGetWindowSize(window:GLFWwindow, width:i32, height:i32)
 
 @native(glfwSetWindowAspectRatio($window,$numer,$denom))
-func glfwSetWindowAspectRatio(window:GLFWwindow, numer:i32, denom:i32)
+function glfwSetWindowAspectRatio(window:GLFWwindow, numer:i32, denom:i32)
 
 @native(glfwSetWindowSizeLimits($window,$minwidth,$minheight,$maxwidth,$maxheight))
-func glfwSetWindowSizeLimits(window:GLFWwindow, minwidth:i32, minheight:i32, maxwidth:i32, maxheight:i32)
+function glfwSetWindowSizeLimits(window:GLFWwindow, minwidth:i32, minheight:i32, maxwidth:i32, maxheight:i32)
 
 @native(glfwFocusWindow($window))
-func glfwFocusWindow(window:GLFWwindow)
+function glfwFocusWindow(window:GLFWwindow)
 
 @native(glfwIconifyWindow($window))
-func glfwIconifyWindow(window:GLFWwindow)
+function glfwIconifyWindow(window:GLFWwindow)
 
 @native(glfwRestoreWindow($window))
-func glfwRestoreWindow(window:GLFWwindow)
+function glfwRestoreWindow(window:GLFWwindow)
 
 @native(glfwShowWindow($window))
-func glfwShowWindow(window:GLFWwindow)
+function glfwShowWindow(window:GLFWwindow)
 
 @native(glfwHideWindow($window))
-func glfwHideWindow(window:GLFWwindow)
+function glfwHideWindow(window:GLFWwindow)
 
 @native(glfwGetWindowMonitor($window))
-func glfwGetWindowMonitor(window:GLFWwindow):GLFWmonitor
+function glfwGetWindowMonitor(window:GLFWwindow):GLFWmonitor
 
 @native(glfwWaitEvents)
-func glfwWaitEvents()
+function glfwWaitEvents()
 
 @native(glfwGetInputMode($window,$mode))
-func glfwGetInputMode(window:GLFWwindow, mode:i32):i32
+function glfwGetInputMode(window:GLFWwindow, mode:i32):i32
 
 @native(glfwSetInputMode($window,$mode,$value))
-func glfwSetInputMode(window:GLFWwindow, mode:i32, value:i32)
+function glfwSetInputMode(window:GLFWwindow, mode:i32, value:i32)
 
 @native(glfwGetKey($window,$key))
-func glfwGetKey(window:GLFWwindow, key:i32):i32
+function glfwGetKey(window:GLFWwindow, key:i32):i32
 
 @native(glfwGetMouseButton($window,$button))
-func glfwGetMouseButton(window:GLFWwindow, button:i32):i32
+function glfwGetMouseButton(window:GLFWwindow, button:i32):i32
 
 @native(glfwGetCursorPos($window,$xpos,$ypos))
-func glfwGetCursorPos(window:GLFWwindow, xpos:f64, ypos:f64)
+function glfwGetCursorPos(window:GLFWwindow, xpos:f64, ypos:f64)
 
 @native(glfwSetCursorPos($window,$xpos,$ypos))
-func glfwSetCursorPos(window:GLFWwindow, xpos:f64, ypos:f64)
+function glfwSetCursorPos(window:GLFWwindow, xpos:f64, ypos:f64)
 
 @native(glfwCreateCursor($image,$xhot,$yhot))
-func glfwCreateCursor(image:GLFWimage, xhot:i32, yhot:i32):GLFWcursor
+function glfwCreateCursor(image:GLFWimage, xhot:i32, yhot:i32):GLFWcursor
 
 @native(glfwCreateStandardCursor($shape))
-func glfwCreateStandardCursor(shape:i32):GLFWcursor
+function glfwCreateStandardCursor(shape:i32):GLFWcursor
 
 @native(glfwDestroyCursor($cursor))
-func glfwDestroyCursor(cursor:GLFWcursor)
+function glfwDestroyCursor(cursor:GLFWcursor)
 
 @native(glfwSetCursor($window,$cursor))
-func glfwSetCursor(window:GLFWwindow, cursor:GLFWcursor)
+function glfwSetCursor(window:GLFWwindow, cursor:GLFWcursor)
 
 @native(glfwSetCharModsCallback($window,$callback))
-func glfwSetCharModsCallback(window:GLFWwindow, callback:GLFWcharmodsfun)
+function glfwSetCharModsCallback(window:GLFWwindow, callback:GLFWcharmodsfun)
 
 @native(glfwSetDropCallback($window,$callback))
-func glfwSetDropCallback(window:GLFWwindow, callback:GLFWdropfun)
+function glfwSetDropCallback(window:GLFWwindow, callback:GLFWdropfun)
 
 @native(glfwJoystickPresent($joy))
-func glfwJoystickPresent(joy:i32):bool
+function glfwJoystickPresent(joy:i32):bool
 
 @native(glfwGetJoystickAxes($joy,$count))
-func glfwGetJoystickAxes(joy:i32, count:i32):f64
+function glfwGetJoystickAxes(joy:i32, count:i32):f64
 
 @native(glfwGetJoystickButtons($joy,$count))
-func glfwGetJoystickButtons(joy:i32, count:i32):i32
+function glfwGetJoystickButtons(joy:i32, count:i32):i32
 
 @native(glfwGetJoystickName($joy))
-func glfwGetJoystickName(joy:i32):string
+function glfwGetJoystickName(joy:i32):string
 
 @native(glfwSetClipboardString($window,$string))
-func glfwSetClipboardString(window:GLFWwindow, string:string)
+function glfwSetClipboardString(window:GLFWwindow, string:string)
 
 @native(glfwGetClipboardString($window))
-func glfwGetClipboardString(window:GLFWwindow):string
+function glfwGetClipboardString(window:GLFWwindow):string
 
 @native(glfwGetTime)
-func glfwGetTime():f64
+function glfwGetTime():f64
 
 @native(glfwSetTime($time))
-func glfwSetTime(time:f64)
+function glfwSetTime(time:f64)
 
 @native(glfwGetCurrentContext)
-func glfwGetCurrentContext():GLFWwindow
+function glfwGetCurrentContext():GLFWwindow
 
 @native(glfwSwapInterval($interval))
-func glfwSwapInterval(interval:i32)
+function glfwSwapInterval(interval:i32)
 
 @native(glfwExtensionSupported($extension))
-func glfwExtensionSupported(extension:string):bool
+function glfwExtensionSupported(extension:string):bool
 
 @native(glfwGetProcAddress($procname))
-func glfwGetProcAddress(procname:string):GLFWglproc
+function glfwGetProcAddress(procname:string):GLFWglproc
 
 @native(glfwVulkanSupported)
-func glfwVulkanSupported():bool
+function glfwVulkanSupported():bool
 
 @native(glfwGetRequiredInstanceExtensions($count))
-func glfwGetRequiredInstanceExtensions(count:i32):string
+function glfwGetRequiredInstanceExtensions(count:i32):string
 
 @native(glfwSetWindowShouldClose($window,$value))
-func glfwSetWindowShouldClose(window:GLFWwindow, value:bool)
+function glfwSetWindowShouldClose(window:GLFWwindow, value:bool)
 
 @native(glfwSetWindowTitle($window,$title))
-func glfwSetWindowTitle(window:GLFWwindow, title:string)
+function glfwSetWindowTitle(window:GLFWwindow, title:string)
 
 type Window {
 	var _width:i32
@@ -314,7 +314,7 @@ type Window {
 		initialize()
 	}
 
-	func initialize {
+	function initialize {
 		if _initialized == false {
 			if glfwInit()==false =>  return
 			_initialized = true
@@ -325,36 +325,36 @@ type Window {
 		_window = glfwCreateWindow(_width, _height, _title)
 	}
 
-	static func pollEvents => glfwPollEvents()
-	static func terminate => glfwTerminate()
-	static func swapInterval(ms:i32) => glfwSwapInterval(ms)
+	static function pollEvents => glfwPollEvents()
+	static function terminate => glfwTerminate()
+	static function swapInterval(ms:i32) => glfwSwapInterval(ms)
 
-	func show  {
+	function show  {
 		if _isVisible == true || _window == null => return
 		_isVisible = true
 		glfwShowWindow(_window)
 	}
 
-	func hide  {
+	function hide  {
 		if _isVisible == false || _window == null => return
 		_isVisible = false
 		glfwHideWindow(_window)
 	}
 
-	func close {
+	function close {
 		glfwDestroyWindow(_window)
 		_window = null
 	}
 
 	property isClosing:bool => _window!=null ? glfwWindowShouldClose(_window) : true
 
-	func swapBuffers => glfwSwapBuffers(_window)
+	function swapBuffers => glfwSwapBuffers(_window)
 
-	func setWidth(w:i32) {
+	function setWidth(w:i32) {
 		_width = w
 	}
 
-	func setHeight(h:i32) {
+	function setHeight(h:i32) {
 		_height = h
 	}
 
@@ -368,7 +368,7 @@ type Window {
 		set => setHeight(value)
 	}
 
-	func setTitle(t:string) {
+	function setTitle(t:string) {
 		if _window == null => return
 		_title = t
 		glfwSetWindowTitle(_window, t)
@@ -379,7 +379,7 @@ type Window {
 		set => setTitle(value)
 	}
 
-	func loop {
+	function loop {
 		for isClosing == false {
 			Window.pollEvents()
 			swapBuffers()

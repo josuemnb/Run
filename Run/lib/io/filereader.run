@@ -20,7 +20,7 @@ type FileReader: FileBase {
 		ended = 0
 	}
 		
-	func resize(length:i32) {
+	function resize(length:i32) {
 		if ok == false => return
 		if readed + length > capacity {
 			readed = 0
@@ -40,23 +40,23 @@ type FileReader: FileBase {
 		}
 	}
 
-	func readI32():i32 => readInternal(4) as i32
+	function readI32():i32 => readInternal(4) as i32
 
-	func readI64():i64 => readInternal(8) as i64
+	function readI64():i64 => readInternal(8) as i64
 
-	func readI16():i16 => readInternal(2) as i16
+	function readI16():i16 => readInternal(2) as i16
 
-	func readI8():i8 => readInternal(1) as i8
+	function readI8():i8 => readInternal(1) as i8
 
-	func readString(length:i32):string => readInternal(length) as string
+	function readString(length:i32):string => readInternal(length) as string
 
-	func readF32():f32 => readInternal(4) as f32
+	function readF32():f32 => readInternal(4) as f32
 
-	func readf64():f64 => readInternal(8) as f64
+	function readf64():f64 => readInternal(8) as f64
 
-	func read(length:i32):byte[] => readInternal(length) as byte[]
+	function read(length:i32):byte[] => readInternal(length) as byte[]
 
-	func readInternal(length:i32): pointer {
+	function readInternal(length:i32): pointer {
 		if ok == false => return null
 		resize(length)
 		if ended == 2 => return null
@@ -64,7 +64,7 @@ type FileReader: FileBase {
 		return (buffer + readed) as pointer
 	}
 
-	func readAll:string {
+	function readAll:string {
 		if ok == false => return null
 		end()
 		var size = position
@@ -74,7 +74,7 @@ type FileReader: FileBase {
 		return bytes as string	
 	}
 
-	func dispose {
+	function dispose {
 		close()
 		delete(buffer)
 		capacity = 0

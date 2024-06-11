@@ -1,0 +1,155 @@
+// VERY IMPORTANT
+// DO NOT CHANGE THIS FILE
+
+@native(floor($x):f64)
+func floor(x:f64):f64
+
+@native(log10($x):f64)
+func log10(x:f64):f64
+
+@native(abs($x):i32)
+func abs(x:i32):i32
+
+@native(sprintf($s, $fmt, $args))
+@header(stdio.h)
+func sprintf(s:i8[], fmt:string, ...args:any)
+
+//TODO rever se deve ser primitiva e void*
+//@primitive
+@native(char)
+type pointer { }
+
+@primitive
+@number
+@native(long long)
+type i64 { 
+	func toString:string => NumberHelper.toString(this, 21)
+	static var max:i64 => 9223372036854775807
+	static var min:i64 => -9223372036854775808
+}
+
+@primitive
+@number
+@native(int)
+type i32 {
+	func toString:string => NumberHelper.toString(this as i64, 11)	
+	static var max:i32 => 2147483647
+	static var min:i32 => -2147483648
+}
+
+@primitive
+@number
+@native(short)
+type i16 { 
+	func toString:string => NumberHelper.toString(this as i64, 7)	
+	static var max:i16 => 32767
+	static var min:i16 => -32768
+}
+
+@primitive
+@number
+@native(char)
+type i8 { 
+	func toString:string => NumberHelper.toString(this as i64, 5)	
+	static var max:i8 => 127
+	static var min:i8 => -128
+
+	property isDigit:bool => this >= '0' && this <= '9'
+	property isAlpha:bool => (this >= 'a' && this <= 'z') || (this >= 'A' && this <= 'Z')
+	property isAlNum:bool => isDigit || isAlpha
+	property isSpace:bool => this == ' ' || this == '\t' || this == '\n' || this == '\r'
+	property isLower:bool => this >= 'a' && this <= 'z'
+	property isUpper:bool => this >= 'A' && this <= 'Z'
+	property isPrint:bool => this >= ' ' && this <= '~'
+	property isPunct:bool => (this >= '!' && this <= '/') || (this >= ':' && this <= '@') || (this >= '[' && this <= '`') || (this >= '{' && this <= '~')
+	property isGraph:bool => isPrint && isSpace==false
+	property isBlank:bool => this == ' ' || this == '\t'
+	property isCntrl:bool => this >= 0 && this <= 31
+	property isHexa:bool => (this >= '0' && this <= '9') || (this >= 'a' && this <= 'f') || (this >= 'A' && this <= 'F')
+	property isOctal:bool => this >= '0' && this <= '7'
+	property isBinary:bool => this == '0' || this == '1'
+	property isAscii:bool => this >= 0 && this <= 127
+	property isWide:bool => this >= 128 && this <= 255
+	property isMax:bool => this == max
+	property isMin:bool => this == min
+}
+
+// VERY IMPORTANT
+// DO NOT CHANGE THIS FILE
+
+@primitive
+@native(unsigned long long)
+@number
+type u64 { 
+	func toString:string => NumberHelper.toString(this as u64, 21)	
+	static var max:u64 => 18446744073709551615
+	static var min:u64 => 0
+}
+
+@primitive
+@number
+@native(unsigned int)
+type u32 { 
+	func toString:string => NumberHelper.toString(this as u64, 11)	
+	static var max:u32 => 4294967295
+	static var min:u32 => 0
+}
+
+@primitive
+@number
+@native(unsigned short)
+type u16 { 
+	func toString:string => NumberHelper.toString(this as u64, 7)	
+	static var max:u16 => 65535
+	static var min:u16 => 0
+}
+
+@primitive
+@number
+@native(unsigned char)
+type u8 { 
+	func toString:string => NumberHelper.toString(this as u64, 5)
+	static var max:u8 => 255
+	static var min:u8 => 0
+}
+
+@primitive
+@native(unsigned char)
+type bool { 
+	func toString:string => this ? "true" : "false"
+}
+
+@primitive
+@number
+@native(float)
+type f32 { 
+	func toString: string {	
+		var s = new i8[20]
+		sprintf(s, "%f", this)
+		return s as string
+	}	
+	static var max:f32 => 3.402823466e+38
+	static var min:f32 => -3.402823466e+38
+}
+
+@primitive
+@number
+@native(double)
+type f64 { 
+	func toString: string {	
+		var s = new i8[26]
+		sprintf(s, "%f", this)
+		return s as string
+	}
+	static var max:f64 => 1.7976931348623157e+308
+	static var min:f64 => -1.7976931348623157e+308
+}
+
+@primitive
+@number
+@native(unsigned char)
+type byte { }
+
+@primitive
+@native(wchar_t)
+type char { }

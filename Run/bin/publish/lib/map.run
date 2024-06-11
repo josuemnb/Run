@@ -1,0 +1,31 @@
+﻿// VERY IMPORTANT
+// DO NOT CHANGE THIS FILE
+
+using array
+
+type mapStringAny {
+	var keys:arrayString
+	var values:arrayAny
+
+	this {
+		keys = new arrayString()
+		values = new arrayAny()	
+	}
+
+	func add(key:string, value:pointer):bool {
+		if keys.contains(key) {
+			return false
+		}
+		keys.add(key)
+		values.add(value)
+		return true
+	}
+
+	func get(key:string):any {
+		var index = keys.indexOf(key)
+		if index >-1 {
+			return values.get(index)
+		}
+		return null
+	}
+}

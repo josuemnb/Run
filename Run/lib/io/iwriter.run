@@ -1,6 +1,6 @@
 
 interface IWriter {
-	func write(s: string) {}
-	func write(b: byte[],start: i32, count: i32) {}
-	func flush {}
+	function write(s: chars) {}
+	function write(b: byte[],start: i32, count: i32) {}
+	function flush {}
 }

@@ -1,0 +1,31 @@
+@primitive
+@number
+@native(int)
+type i32 {
+}
+
+
+type test {
+	var values: i32[]
+
+	this {
+	}
+
+	indexer [i: i32]: i32 {
+		get => values[i]
+		set {
+			values[i] = value
+		}
+	}
+
+	var _ok:i32
+	property ok: i32 {
+		get => _ok
+		set => _ok = value
+	}
+}
+
+main {
+	var t = new test()
+	t[0] = 1
+}

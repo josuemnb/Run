@@ -1,0 +1,84 @@
+// VERY IMPORTANT
+// DO NOT CHANGE THIS FILE
+
+using filebase
+
+enum FileReaderMode {
+	READ = "r"
+	READ_BINARY = "rb"
+}
+
+type FileReader: FileBase {
+	var buffer:byte[]
+	var capacity:i32
+	var readed:i32
+	var mode:FileReaderMode
+
+	this(.path,.mode) {
+		fp = fopen(path,mode as string)
+		opened = true
+		ended = 0
+	}
+		
+	func resize(length:i32) {
+		if ok == false => return
+		if readed + length > capacity {
+			readed = 0
+			if length > capacity {
+				capacity = length
+				buffer = realloc(buffer as pointer,capacity) as byte[]
+			}
+			var sz = fread(buffer as pointer, capacity, 1, fp)
+			if(sz < capacity) {
+				if sz== 0 {
+					ended = 2
+				} else {
+					ended = 1
+				}
+				capacity = sz
+			}
+		}
+	}
+
+	func readI32():i32 => readInternal(4) as i32
+
+	func readI64():i64 => readInternal(8) as i64
+
+	func readI16():i16 => readInternal(2) as i16
+
+	func readI8():i8 => readInternal(1) as i8
+
+	func readString(length:i32):string => readInternal(length) as string
+
+	func readF32():f32 => readInternal(4) as f32
+
+	func readf64():f64 => readInternal(8) as f64
+
+	func read(length:i32):byte[] => readInternal(length) as byte[]
+
+	func readInternal(length:i32): pointer {
+		if ok == false => return null
+		resize(length)
+		if ended == 2 => return null
+		defer readed+=length
+		return (buffer + readed) as pointer
+	}
+
+	func readAll:string {
+		if ok == false => return null
+		end()
+		var size = position
+		var bytes = new u8[size]
+		begin()
+		fread(bytes as pointer, size, 1, fp)
+		return bytes as string	
+	}
+
+	func dispose {
+		close()
+		delete(buffer)
+		capacity = 0
+		ended = 2
+		readed = 0	
+	}
+}

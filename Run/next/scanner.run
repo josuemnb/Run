@@ -20,7 +20,7 @@ type Scanner {
 		this.column = 0
 	}
 
-	func getToken:Token {
+	function getToken:Token {
 		setup()
 
 		if position>= size {
@@ -42,15 +42,15 @@ type Scanner {
             current.value = "\n"
             return current
 		}
-		if(isNumber(current)) => return current
-        if (isValidCharacter(current)) => goto end
-        if (valid && (data[position].isAlpha) || (data[position] == '_') {
+		if isNumber(current) => return current
+        if isValidCharacter(current) => goto end
+        if valid && (data.value[position].isAlpha) || (data.value[position] == '_') {
             var start = position
-            for var i = 0; i < 3 && data[position] == '_'; i++ => position++ 
+            for var i = 0; i < 3 && data.value[position] == '_'; i++ => position++ 
             var p = position
-            for valid && ((data[position].isAlNum) || (data[position] == '_')) => position++
+            for valid && ((data.value[position].isAlNum) || (data.value[position] == '_')) => position++
             if (p == position) => return false
-            if valid && (data[position] == '_') => return false
+            if valid && (data.value[position] == '_') => return false
             current.value = data.substring(start, position - start)
             if current.value == "as" {
                 current.kind = TokenKind.AS
@@ -67,7 +67,7 @@ type Scanner {
 		return current
 	}
 
-	func skip(newLines:bool):bool {
+	function skip(newLines:bool):bool {
 		setup()
 		if position <0 {
 			position = 0
@@ -76,7 +76,7 @@ type Scanner {
 		if data == null || size<=position {
 			return false
 		}
-		for position < size && (data[position] == '\t' || data[position] == ' ') || (newLines && (data[position] == '\n' || data[position] == '\r')) {
+		for position < size && (data.value[position] == '\t' || data.value[position] == ' ') || (newLines && (data.value[position] == '\n' || data.value[position] == '\r')) {
 			position++
 			column++
 		}
@@ -86,19 +86,19 @@ type Scanner {
 		return true
 	}
 
-	func test(kind:TokenKind):bool {
+	function test(kind:TokenKind):bool {
 		var token = test()
 		return token.kind == kind
 	}
 
-	func testFamily(family:TokenKind):bool {
+	function testFamily(family:TokenKind):bool {
 		var token = test()
 		return token.family == family
 	}
 
-    func rollBack => rollBack(current)
+    function rollBack => rollBack(current)
 
-    func rollBack(tok:Token) {
+    function rollBack(tok:Token) {
 		if tok.value!=null {        
             line = tok.line
             position = tok.position
@@ -107,18 +107,18 @@ type Scanner {
         }
 	}
 
-     func peek:i8 {
+     function peek:i8 {
         if skip(false)==false => return i8.max
         if valid==false => return i8.max
-        return data[position]
+        return data.value[position]
     }
 
-	func walk {
+	function walk {
 		position++
 		column++	
 	}
 
-	func test(): Token {
+	function test(): Token {
 		var cur = current
 		var pos = position
 		var col = column
@@ -133,10 +133,10 @@ type Scanner {
 
 	property valid:bool => position < size
 
-	func skipLine:bool {
+	function skipLine:bool {
 		var ret:bool
-		for valid && (data[position] != '\n') {
-			if data[position] == '{' {
+		for valid && (data.value[position] != '\n') {
+			if data.value[position] == '{' {
 				ret = true
 			}
 			position++
@@ -145,11 +145,11 @@ type Scanner {
 		return ret
 	}
 
-    func skipBlock {
+    function skipBlock {
         var block = skipLine() ? 1 : 0
         for block > 0 {
             if (data == null) || (size == 0) || (valid==false) => return
-            switch (data[position]) {
+            switch (data.value[position]) {
                 case '{' => block++
                 case '}' {
                     block--
@@ -165,10 +165,10 @@ type Scanner {
         }
     }
 
-     func expect(ch:i8):bool {
+     function expect(ch:i8):bool {
         if skip(false) == false => return false
         if valid == false => return false
-        if (data[position] != ch) => return false
+        if (data.value[position] != ch) => return false
 
         current = new Token()
         current.column = column
@@ -182,13 +182,13 @@ type Scanner {
         return true
     }
 
-     func expect(exp:string):bool {
+     function expect(exp:string):bool {
         if (exp==null) || (skip(false)==false) => return false
         var len = exp.size  
         if len == 0 => return false
         if (position + len >= size) => return false
         for var i = 0; i < len; i++ {
-            if (data[position + i] != exp[i]) => return false
+            if (data.value[position + i] != exp.value[i]) => return false
         }
 
         current = new Token()
@@ -203,7 +203,7 @@ type Scanner {
         return true
     }
 
-    func getName(back: bool):Token {
+    function getName(back: bool):Token {
         var cur = current
         var scan = getToken()
         if (scan == null) => return null
@@ -217,7 +217,7 @@ type Scanner {
         return scan
     }
 
-    func until(delimeter:string):Token {
+    function until(delimeter:string):Token {
         var idx = data.indexOf(delimeter, position)
         if (idx < 0) => return Token.Empty
         var token = new Token()
@@ -232,15 +232,15 @@ type Scanner {
         return token
     }
 
-	func isValidCharacter(tok:Token):bool {
+	function isValidCharacter(tok:Token):bool {
             tok.kind = 0 as TokenKind
             if (valid==false) => return false
             var start = position
             var len:i32
-            switch data[position] {
+            switch data.value[position] {
                 case '\r', '\n' {
-                    for (valid && (data[position] == '\r' || data[position] == '\n')) {
-                        if (data[position] == '\n') => line++
+                    for (valid && (data.value[position] == '\r' || data.value[position] == '\n')) {
+                        if (data.value[position] == '\n') => line++
                         position++
                     }
                     column = 0
@@ -264,12 +264,12 @@ type Scanner {
                     tok.value = data.substring(start, 1)
                 }
                 case '+' {
-                    if (valid && data[position + 1] == '+') {
+                    if (valid && data.value[position + 1] == '+') {
                         position++
                         len = 1
                         tok.kind = TokenKind.INCREMENT
                         tok.family = TokenKind.ARITMETIC
-                    } else if (valid && data[position + 1] == '=') {
+                    } else if (valid && data.value[position + 1] == '=') {
                         len = 1
                         tok.kind = TokenKind.PLUS_ASSIGN
                         tok.family = TokenKind.ARITMETIC
@@ -278,15 +278,15 @@ type Scanner {
                         tok.kind = TokenKind.PLUS
                         tok.family = TokenKind.ARITMETIC
                     }
-                    tok.value = data.substring(start, (isDouble(data[position]) ? 2 : 1) + len)
+                    tok.value = data.substring(start, (isDouble(data.value[position]) ? 2 : 1) + len)
                 }
                 case '-' {
-                    if (valid && data[position + 1] == '-') {
+                    if (valid && data.value[position + 1] == '-') {
                         len = 1
                         position++
                         tok.kind = TokenKind.DECREMENT
                         tok.family = TokenKind.ARITMETIC
-                    } else if (valid && data[position + 1] == '=') {
+                    } else if (valid && data.value[position + 1] == '=') {
                         len = 1
                         tok.kind = TokenKind.MINUS_ASSIGN
                         tok.family = TokenKind.ARITMETIC
@@ -295,14 +295,14 @@ type Scanner {
                         tok.kind = TokenKind.MINUS
                         tok.family = TokenKind.ARITMETIC
                     }
-                    tok.value = data.substring(start, (isDouble(data[position]) ? 2 : 1) + len)
+                    tok.value = data.substring(start, (isDouble(data.value[position]) ? 2 : 1) + len)
                 }
                 case '/' {
-                    if (valid && data[position + 1] == '*') {
+                    if (valid && data.value[position + 1] == '*') {
                         position++
                     //again:
-                        for (valid && data[position] != '*') =>  position++
-                        if (valid && data[position + 1] != '/') {
+                        for (valid && data.value[position] != '*') =>  position++
+                        if (valid && data.value[position + 1] != '/') {
                             position++
                       //      goto again
                         }
@@ -310,12 +310,12 @@ type Scanner {
                         tok.family = TokenKind.SYNTAX
                         len = position - start
                     }
-                    if (valid && data[position + 1] == '/') {
+                    if (valid && data.value[position + 1] == '/') {
                         len = 2
                         position++
                         tok.kind = TokenKind.COMMENT
                         tok.family = TokenKind.SYNTAX
-                    } else if (valid && data[position + 1] == '=') {
+                    } else if (valid && data.value[position + 1] == '=') {
                         len = 2
                         tok.kind = TokenKind.DIVIDE_ASSIGN
                         tok.family = TokenKind.ARITMETIC
@@ -324,10 +324,10 @@ type Scanner {
                         tok.kind = TokenKind.DIVIDE
                         tok.family = TokenKind.ARITMETIC
                     }
-                    tok.value = data.substring(start, (isDouble(data[position]) ? 2 : 1) + len)
+                    tok.value = data.substring(start, (isDouble(data.value[position]) ? 2 : 1) + len)
                 }
                 case '*' {
-                    if (valid && data[position + 1] == '=') {
+                    if (valid && data.value[position + 1] == '=') {
                         len = 1
                         tok.kind = TokenKind.MULTIPLY_ASSIGN
                         tok.family = TokenKind.ARITMETIC
@@ -336,7 +336,7 @@ type Scanner {
                         tok.kind = TokenKind.MULTIPLY
                         tok.family = TokenKind.ARITMETIC
                     }
-                    tok.value = data.substring(start, (isDouble(data[position]) ? 2 : 1) + len)
+                    tok.value = data.substring(start, (isDouble(data.value[position]) ? 2 : 1) + len)
                 }
                 case ',' {
                     tok.kind = TokenKind.COMMA
@@ -360,26 +360,26 @@ type Scanner {
                 }
                 case '{', '}' {
                     tok.family = TokenKind.SYNTAX
-                    tok.kind = data[position] == '{' ? TokenKind.OPEN_BLOCK : TokenKind.CLOSE_BLOCK
+                    tok.kind = (data.value[position] == '{' ? TokenKind.OPEN_BLOCK : TokenKind.CLOSE_BLOCK)
                     tok.value = data.substring(start, 1)
                 }
                 case '[', ']' {
                     tok.family = TokenKind.SYNTAX
-                    tok.kind = data[position] == '[' ? TokenKind.OPEN_ARRAY : TokenKind.CLOSE_ARRAY
+                    tok.kind = (data.value[position] == '[' ? TokenKind.OPEN_ARRAY : TokenKind.CLOSE_ARRAY)
                     tok.value = data.substring(start, 1)
                 }
                 case '(', ')' {
                     tok.family = TokenKind.SYNTAX
-                    tok.kind = data[position] == '(' ? TokenKind.OPEN_PARENTESES : TokenKind.CLOSE_PARENTESES
+                    tok.kind = (data.value[position] == '(' ? TokenKind.OPEN_PARENTESES : TokenKind.CLOSE_PARENTESES)
                     tok.value = data.substring(start, 1)
                 }
                 case '=' {
-                    if (valid && data[position + 1] == '=') {
+                    if (valid && data.value[position + 1] == '=') {
                         position++
                         tok.kind = TokenKind.EQUAL
                         tok.family = TokenKind.LOGICAL
                         tok.value = data.substring(start, 2)
-                    } else if (valid && data[position + 1] == '>') {
+                    } else if (valid && data.value[position + 1] == '>') {
                         position++
                         tok.kind = TokenKind.ARROW
                         tok.family = TokenKind.SYNTAX
@@ -392,11 +392,11 @@ type Scanner {
                 }
                 case '.' {
                     tok.family = TokenKind.SYNTAX
-                    if (valid && data[position + 1] == '.') {
+                    if (valid && data.value[position + 1] == '.') {
                         position++
                         tok.kind = TokenKind.RANGE
                         tok.value = data.substring(start, 2)
-                        if (valid && data[position + 1] == '.') {
+                        if (valid && data.value[position + 1] == '.') {
                             position++
                             tok.kind = TokenKind.VA_ARGS
                             tok.value = data.substring(start, 3)
@@ -410,12 +410,12 @@ type Scanner {
                     len = 1
                     tok.kind = TokenKind.GREATHER
                     tok.family = TokenKind.LOGICAL
-                    if (valid && data[position + 1] == '=') {
+                    if (valid && data.value[position + 1] == '=') {
                         tok.kind = TokenKind.GREAT_OR_EQUAL
                         tok.family = TokenKind.LOGICAL
                         position++
                         len = 2
-                    } else if (valid && data[position + 1] == '>') {
+                    } else if (valid && data.value[position + 1] == '>') {
                         tok.kind = TokenKind.SHIFT_RIGHT
                         tok.family = TokenKind.ARITMETIC
                         position++
@@ -427,9 +427,9 @@ type Scanner {
                     len = 1
                     tok.kind = TokenKind.LOWER
                     tok.family = TokenKind.LOGICAL
-                    if (valid && data[position + 1] == '=') {
+                    if (valid && data.value[position + 1] == '=') {
                         position++
-                        if (valid && data[position + 1] == '>') {
+                        if (valid && data.value[position + 1] == '>') {
                             position++
                             tok.kind = TokenKind.TREE_WAY
                             len = 3
@@ -437,7 +437,7 @@ type Scanner {
                             tok.kind = TokenKind.LOWER_OR_EQUAL
                             len = 2
                         }
-                    } else if (valid && data[position + 1] == '<') {
+                    } else if (valid && data.value[position + 1] == '<') {
                         tok.kind = TokenKind.SHIFT_LEFT
                         tok.family = TokenKind.ARITMETIC
                         position++
@@ -449,7 +449,7 @@ type Scanner {
                     len = 1
                     tok.kind = TokenKind.BANG
                     tok.family = TokenKind.LOGICAL
-                    if (valid && data[position + 1] == '=') {
+                    if (valid && data.value[position + 1] == '=') {
                         tok.kind = TokenKind.DIFFERENT
                         position++
                         len = 2
@@ -460,11 +460,11 @@ type Scanner {
                     len = 1
                     tok.kind = TokenKind.BITWISE_AND
                     tok.family = TokenKind.LOGICAL
-                    if (valid && data[position + 1] == '&') {
+                    if (valid && data.value[position + 1] == '&') {
                         tok.kind = TokenKind.AND
                         position++
                         len = 2
-                    } else if (valid && data[position + 1] == '=') {
+                    } else if (valid && data.value[position + 1] == '=') {
                         len = 2
                         tok.kind = TokenKind.AND_ASSIGN
                         position++
@@ -475,11 +475,11 @@ type Scanner {
                     len = 1
                     tok.kind = TokenKind.BITWISE_OR
                     tok.family = TokenKind.LOGICAL
-                    if (valid && data[position + 1] == '|') {
+                    if (valid && data.value[position + 1] == '|') {
                         tok.kind = TokenKind.OR
                         position++
                         len = 2
-                    } else if (valid && data[position + 1] == '=') {
+                    } else if (valid && data.value[position + 1] == '=') {
                         len = 2
                         tok.kind = TokenKind.OR_ASSIGN
                         position++
@@ -493,9 +493,9 @@ type Scanner {
                 }
                 case '"' {
                     position++
-                    for (valid && data[position] != '"') {
-                        if (data[position] == '\\') {
-                            switch (data[position]) {
+                    for (valid && data.value[position] != '"') {
+                        if (data.value[position] == '\\') {
+                            switch (data.value[position]) {
                                 case '\\' , 't' , 'n' , 'r' , 'b' , '0' , '\'' , '"' => position++
                             }
                         }
@@ -509,88 +509,88 @@ type Scanner {
                     position++
                     var temp = position
                     var empty = true
-                    if (valid && data[position] == '\\') {
+                    if (valid && data.value[position] == '\\') {
                         position++
                         empty = false
-                        switch (data[position]) {
+                        switch (data.value[position]) {
                             case '\\', 't', 'n', 'r', 'b', '0', '\'', '"' => position++
                             default => return false
                         }
-                    } else if (valid && data[position] != '\'') {
+                    } else if (valid && data.value[position] != '\'') {
                         position++
                         empty = false
                     }
-                    if (valid && data[position] == '\'') {
+                    if (valid && data.value[position] == '\'') {
                         tok.kind = TokenKind.CHAR
                         tok.family = TokenKind.LITERAL
-                        tok.value = empty ? "0" : ("'" + data.substring(temp, position - temp) + "'")
+                        tok.value = (empty ? "0" : ("'" + data.substring(temp, position - temp) + "'"))
                     }
                 }
                 default => return false
             }
             position++
-            return tok.kind != 0 as TokenKind
+            return tok.kind != TokenKind.NONE
         }
 
-	func isNumber(tok:Token):bool {
+	function isNumber(tok:Token):bool {
         if (valid==false) => return false
-        if (data[position] == '-') {
-            if (data[position + 1].isDigit) {
+        if (data.value[position] == '-') {
+            if (data.value[position + 1].isDigit) {
                 position++
                 getNumber(tok, false)
                 return true
             }
-        } else if (data[position].isDigit) {
+        } else if (data.value[position].isDigit) {
             getNumber(tok, true)
             return true
         }
         return false
     }
 
-    func isDouble(ch:i8):bool {
-        if (valid && (position + 1) < size && data[position + 1] == ch) {
+    function isDouble(ch:i8):bool {
+        if (valid && (position + 1) < size && data.value[position + 1] == ch) {
             position++
             return true
         }
         return false
     }
 
-	func getReal(tok:Token) {
+	function getReal(tok:Token) {
             tok.kind = TokenKind.REAL
-            for (valid && data[position].isDigit) {
+            for (valid && data.value[position].isDigit) {
                 position++
             }
-            if (valid && (data[position] == 'e' || data[position] == 'E')) {
+            if (valid && (data.value[position] == 'e' || data.value[position] == 'E')) {
                 position++
-                if (valid && (data[position] == '+' || data[position] == '-')) {
+                if (valid && (data.value[position] == '+' || data.value[position] == '-')) {
                     position++
                 }
-                for (valid && data[position].isDigit) {
+                for (valid && data.value[position].isDigit) {
                     position++
                 }
             }
         }
 
-	func getNumber(tok:Token, positive:bool) {
+	function getNumber(tok:Token, positive:bool) {
             var start = position
             tok.kind = TokenKind.NUMBER
             tok.family = TokenKind.LITERAL
-            for (valid && data[position].isDigit) {
+            for (valid && data.value[position].isDigit) {
                 position++
             }
-            if (valid && data[position] == '.') {
+            if (valid && data.value[position] == '.') {
                 position++
                 getReal(tok)
             }
             tok.value = (positive ? "" : "-") + data.substring(start, position - start)
         }
 
-	func isEOL:bool {
+	function isEOL:bool {
 		if skip(false)==false {
             return true
 		}
-        if (valid==false) || (data[position] == '\n') || (data[position] == '\r') {
-            if (data[position] == '\r') {
+        if (valid==false) || (data.value[position] == '\n') || (data.value[position] == '\r') {
+            if (data.value[position] == '\r') {
                 position++
             }
             column = 0
@@ -600,7 +600,7 @@ type Scanner {
 	}
 
 
-	func setup {
+	function setup {
 		if (position == -1) && (reader != null) {
 			position = 0
 			data = reader.readAll()

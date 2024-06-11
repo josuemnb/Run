@@ -12,7 +12,7 @@ type mapStringAny {
 		values = new arrayAny()	
 	}
 
-	func add(key:string, value:pointer):bool {
+	function add(key:string, value:pointer):bool {
 		if keys.contains(key) {
 			return false
 		}
@@ -21,7 +21,7 @@ type mapStringAny {
 		return true
 	}
 
-	func get(key:string):any {
+	function get(key:string):any {
 		var index = keys.indexOf(key)
 		if index >-1 {
 			return values.get(index)

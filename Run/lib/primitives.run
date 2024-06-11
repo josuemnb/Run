@@ -2,92 +2,60 @@
 // DO NOT CHANGE THIS FILE
 
 @native(floor($x):f64)
-func floor(x:f64):f64
+function floor(x:f64):f64
 
 @native(log10($x):f64)
-func log10(x:f64):f64
+function log10(x:f64):f64
 
 @native(abs($x):i32)
-func abs(x:i32):i32
+function abs(x:i32):i32
 
 @native(sprintf($s, $fmt, $args))
 @header(stdio.h)
-func sprintf(s:i8[], fmt:string, ...args:any)
+function sprintf(s:chars, fmt:chars, ...args:any)
 
-//TODO rever se deve ser primitiva e void*
-//@primitive
 @native(char)
 type pointer { }
-
-static type NumberHelper {
-	static func toString(value:i64, size:i32):string {
-		if value == 0 => return "0"
-		var s = new i8[size]
-		size--
-		s[size] = 0
-		var i = 0
-		var neg = false
-		if value < 0 {
-			value *= -1
-			neg = true
-		}
-		for ;value>0; i++ {
-			s[size - i] = '0' + value % 10
-			value /=10
-		}
-		if neg {
-			s[size - i] = '-'
-			i++
-		}
-		return (s + size + 1 - i) as string
-	}	
-
-	static func toString(value:u64, size:i32):string {
-		if value == 0 => return "0"
-		var s = new i8[size]
-		size--
-		s[size] = 0
-		var i = 0
-		for ;value>0; i++ {
-			s[size - i] = '0' + value % 10
-			value /=10
-		}
-		return (s + size + 1 - i) as string
-	}	
-}
 
 @primitive
 @number
 @native(long long)
 type i64 { 
-	func toString:string => NumberHelper.toString(this, 21)
+	function toString:chars => NumberHelper.toString(this, 21)
+
 	static var max:i64 => 9223372036854775807
-	static var min:i64 => -9223372036854775808
+	static var min:i64 => -9223372036854775807
 }
 
 @primitive
 @number
 @native(int)
-type i32 {
-	func toString:string => NumberHelper.toString(this as i64, 11)	
+type i32: object {
+	function toString:chars => NumberHelper.toString(this as i64, 11)	
+	function hashCode:i32 => ref this
+
 	static var max:i32 => 2147483647
 	static var min:i32 => -2147483648
 }
 
 @primitive
-@native(short)
 @number
-type i16 { 
-	func toString:string => NumberHelper.toString(this as i64, 7)	
+@native(short)
+type i16: object { 
+	function toString:chars => NumberHelper.toString(this as i64, 7)	
+	function hashCode:i32 => ref this
+
 	static var max:i16 => 32767
 	static var min:i16 => -32768
 }
 
 @primitive
-@native(char)
 @number
-type i8 { 
-	func toString:string => NumberHelper.toString(this as i64, 5)	
+@native(char)
+type i8: object { 
+	function toString:chars => NumberHelper.toString(this as i64, 5)	
+	function hashCode:i32 => ref this
+
 	static var max:i8 => 127
 	static var min:i8 => -128
 
@@ -117,74 +85,87 @@ type i8 {
 @primitive
 @native(unsigned long long)
 @number
-type u64 { 
-	func toString:string => NumberHelper.toString(this as u64, 21)	
-	static var max:u64 => 18446744073709551615
+type u64: object { 
+	function toString:chars => NumberHelper.toString(this as u64, 21)	
+	function hashCode:i32 => ref this
+
+	static var max:u64 => 18446744073709551614
 	static var min:u64 => 0
 }
 
 @primitive
 @number
 @native(unsigned int)
-type u32 { 
-	func toString:string => NumberHelper.toString(this as u64, 11)	
+type u32: object{ 
+	function toString:chars => NumberHelper.toString(this as u64, 11)	
+	function hashCode:i32 => ref this
+
 	static var max:u32 => 4294967295
 	static var min:u32 => 0
 }
 
 @primitive
-@native(unsigned short)
 @number
-type u16 { 
-	func toString:string => NumberHelper.toString(this as u64, 7)	
+@native(unsigned short)
+type u16: object { 
+	function toString:chars => NumberHelper.toString(this as u64, 7)	
+	function hashCode:i32 => ref this
+
 	static var max:u16 => 65535
 	static var min:u16 => 0
 }
 
 @primitive
-@native(unsigned char)
 @number
-type u8 { 
-	func toString:string => NumberHelper.toString(this as u64, 5)
+@native(unsigned char)
+type u8: object { 
+	function toString:chars => NumberHelper.toString(this as u64, 5)
+	function hashCode:i32 => ref this
+
 	static var max:u8 => 255
 	static var min:u8 => 0
 }
 
 @primitive
 @native(unsigned char)
-type bool { 
-	func toString:string => this ? "true" : "false"
+type bool: object { 
+	function toString:chars => this ? "true" : "false"
+	function hashCode:i32 => ref this
 }
 
 @primitive
-@native(float)
 @number
-type f32 { 
-	func toString: string {	
-		var s = new i8[20]
+@native(float)
+type f32: object { 
+	function toString: chars {	
+		var s = new i8[40] as chars
 		sprintf(s, "%f", this)
-		return s as string
+		return s	
 	}	
+	function hashCode:i32 => ref this
+
 	static var max:f32 => 3.402823466e+38
 	static var min:f32 => -3.402823466e+38
 }
 
 @primitive
-@native(double)
 @number
-type f64 { 
-	func toString: string {	
-		var s = new i8[26]
+@native(double)
+type f64: object { 
+	function toString: chars {	
+		var s = new i8[310] as chars
 		sprintf(s, "%f", this)
-		return s as string
+		return s
 	}
+	function hashCode:i32 => ref this
+
 	static var max:f64 => 1.7976931348623157e+308
 	static var min:f64 => -1.7976931348623157e+308
 }
 
 @primitive
-@native(unsigned char)
 @number
+@native(unsigned char)
 type byte { }
 
 @primitive

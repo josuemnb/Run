@@ -3,31 +3,31 @@
 
 @native(mkdir($path):i32)
 @header(sys/stat.h)
-func mkdir(path:string):i32
+function mkdir(path:string):i32
 
 @native(rmdir($path):i32)
 @header(sys/stat.h)
-func rmdir(path:string):i32
+function rmdir(path:string):i32
 
 @native(GetFileAttributes($path))
 @header(windows.h)
-func opendir(path:string):i32
+function opendir(path:string):i32
 
 @native(readdir($dir))
 @header(dirent.h)
-func readdir(dir:DIR):dirent
+function readdir(dir:DIR):dirent
 
 @native(FindFirstFileA($path,$data))
 @header(windows.h)
-func findFirstFile(path:string,data:WIN32_FIND_DATA):HANDLE
+function findFirstFile(path:string,data:WIN32_FIND_DATA):HANDLE
 
 @native(FindNextFileA($handle,$data))
 @header(windows.h)
-func findNextFile(handle:HANDLE,data:WIN32_FIND_DATA):i32
+function findNextFile(handle:HANDLE,data:WIN32_FIND_DATA):i32
 
 @native(FindClose($handle))
 @header(windows.h)
-func findClose(handle:HANDLE):i32
+function findClose(handle:HANDLE):i32
 
 @primitive
 @native(HANDLE)
@@ -56,7 +56,7 @@ type WIN32_FIND_DATA {
 type FileList:arrayString {
 	var path:string
 
-	func dispose() {
+	function dispose() {
 		for var i=0;i<size;i++ {
 			var item = get(i)
 			delete item
@@ -67,13 +67,13 @@ type FileList:arrayString {
 
 static type Directory {
 
-	static func create(path:string):bool => mkdir(path) == 0
+	static function create(path:string):bool => mkdir(path) == 0
 
-	static func delete(path:string):bool => rmdir(path) == 0
+	static function delete(path:string):bool => rmdir(path) == 0
 
-	static func exists(path:string):bool => opendir(path) != 0
+	static function exists(path:string):bool => opendir(path) != 0
 
-	static func getFiles(path:string): FileList {
+	static function getFiles(path:string): FileList {
 		var files = new FileList()
 		files.path = path
 		var hFind: HANDLE

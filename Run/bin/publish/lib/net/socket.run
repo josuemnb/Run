@@ -1,0 +1,25 @@
+// VERY IMPORTANT
+// DO NOT CHANGE THIS FILE
+
+@native(struct sockaddr_in)
+@header(winsock2.h)
+type sockaddr_in {
+	var sin_family: u16
+	var sin_port: u16
+	var sin_addr: u32
+}
+
+type Socket {
+	var port: i32
+	var ip: string
+
+	this(.port) {
+		ip = "127.0.0.1"
+	}
+
+	this(.ip, .port) { }
+
+	func connect(): bool {
+		
+	}	
+}

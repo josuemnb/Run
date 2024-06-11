@@ -11,3 +11,6 @@
 /.vs/Run/DesignTimeBuild
 /.vs/ProjectEvaluation/run.metadata.v7.bin
 /.vs/ProjectEvaluation/run.projects.v7.bin
+/Run/bin/x64
+/Run/.vscode
+/.vs/ProjectEvaluation
