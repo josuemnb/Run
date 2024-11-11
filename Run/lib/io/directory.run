@@ -53,17 +53,17 @@ type WIN32_FIND_DATA {
 	var cAlternateFileName: string
 }
 
-type FileList:arrayString {
-	var path:string
-
-	function dispose() {
-		for var i=0;i<size;i++ {
-			var item = get(i)
-			delete item
-		}
-		base.dispose()	
-	}
-}
+// type FileList:arrayString {
+// 	var path:string
+// 
+// 	function dispose() {
+// 		for var i=0;i<size;i++ {
+// 			var item = get(i)
+// 			delete item
+// 		}
+// 		base.dispose()	
+// 	}
+// }
 
 static type Directory {
 
@@ -73,21 +73,21 @@ static type Directory {
 
 	static function exists(path:string):bool => opendir(path) != 0
 
-	static function getFiles(path:string): FileList {
-		var files = new FileList()
-		files.path = path
-		var hFind: HANDLE
-		var data = new WIN32_FIND_DATA()
-
-		if (hFind = findFirstFile(path, data)) >= 0 {
-			files.add(data.cFileName.clone())
-		 	for findNextFile(hFind, data) {
-				files.add(data.cFileName.clone())
-		 	}
-		 	findClose(hFind)
-		}
-
-		delete data
-		return files
-	}
+	// static function getFiles(path:string): FileList {
+	// 	var files = new FileList()
+	// 	files.path = path
+	// 	var hFind: HANDLE
+	// 	var data = new WIN32_FIND_DATA()
+	// 
+	// 	if (hFind = findFirstFile(path, data)) >= 0 {
+	// 		files.add(data.cFileName.clone())
+	// 	 	for findNextFile(hFind, data) {
+	// 			files.add(data.cFileName.clone())
+	// 	 	}
+	// 	 	findClose(hFind)
+	// 	}
+	// 
+	// 	delete data
+	// 	return files
+	// }
 }

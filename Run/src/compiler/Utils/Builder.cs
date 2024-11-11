@@ -18,6 +18,8 @@ namespace Run {
             Token = new Token { Value = "chars" },
         };
         public Class I32;
+        public Class I64;
+        public Class I16;
         public Class I8;
         public Class U32;
         public Class Pointer;
@@ -57,14 +59,18 @@ namespace Run {
         }
 
         void RegisterBuiltinTypes() {
-            //Program.Add<Using>().LoadModule("system");
             Program.Add<Using>().LoadModule("builtin");
         }
 
         public Class Find(string name) {
+            if (string.IsNullOrEmpty(name)) return null;
+
             if (Classes.TryGetValue(name, out Class cls)) {
                 return cls;
             }
+            //if (Classes.Values.FirstOrDefault(cls => cls.Real == name) is Class c) {
+            //    return c;
+            //}
             return null;
         }
 
@@ -108,7 +114,7 @@ namespace Run {
             }
         }
 
-        void RegisterFunction(Function func) {
+        public void RegisterFunction(Function func) {
             if (func.Type != null) {
                 if (Classes.TryGetValue(func.Type.Token.Value, out Class cls) == false) {
                     Program.AddError(func.Type.Token, Error.UnknownType);
@@ -141,8 +147,16 @@ namespace Run {
                 SetBuiltinTypes(cls);
                 SetDefaultConstructor(cls);
             }
-            foreach (var cls in Classes.Values.ToArray()) {
+            foreach (var cls in Classes.Values.OrderBy(c => c.BaseCount)) {
                 ValidateBased(cls);
+            }
+            //foreach (var cls in Classes.Values) {
+            //    if (cls.HasGenerics) {
+
+            //    }
+            //}
+            foreach (var n in Program.FindChildren<NewExpression>()) {
+
             }
         }
 
@@ -162,6 +176,8 @@ namespace Run {
                 case "string": String = cls; break;
                 case "chars": CharSequence = cls; break;
                 case "i32": I32 = cls; break;
+                case "i64": I64 = cls; break;
+                case "i16": I16 = cls; break;
                 case "u32": U32 = cls; break;
                 case "byte": Byte = cls; break;
                 case "char": Char = cls; break;
@@ -189,12 +205,12 @@ namespace Run {
         }
 
         private bool ValidateBased(Class cls) {
-            if (cls.IsBased == false || cls.Base != null) return true;
+            if (cls.IsBased == false || cls.BaseType != null) return true;
             if (Classes.TryGetValue(cls.BaseToken.Token.Value, out Class baseCls) == false) {
                 Program.AddError(cls.BaseToken.Token, Error.UnknownType);
                 return false;
             }
-            cls.Base = baseCls;
+            cls.BaseType = baseCls;
             //cls.Base = ValidateGenerics(baseCls, cls.Based.Generics);
             //if (cls.Token.Value != cls.Based.Token.Value) {
             //    cls.Based.Token = cls.Base.Token;

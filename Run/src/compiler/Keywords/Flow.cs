@@ -34,7 +34,7 @@ namespace Run {
 
         public override void Parse() {
             Token = Scanner.Current;
-            Condition = ExpressionHelper.Expression(this);
+            Condition = ExpressionHelper.Parse(this);
             if (Scanner.Expect("=>")) {
                 ParseBlock(true);
                 return;

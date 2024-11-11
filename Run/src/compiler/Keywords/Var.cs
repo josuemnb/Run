@@ -1,4 +1,4 @@
-﻿using System.IO;
+﻿using ISIExtensions;
 
 namespace Run {
     public class Global : Var { }
@@ -7,20 +7,23 @@ namespace Run {
 
     public class Var : Array {
         public Expression Initializer;
+        public bool InitializerHasGeneric;
         public int Usage = 0;
         public bool IsConst;
         public bool NeedRegister = false;
 
+        public override bool HasGenerics => base.HasGenerics || Generic != null || InitializerHasGeneric;
+
         public void Parse(bool full) {
             if (full) {
                 SetAccess();
-                if (Parent is Class cls && cls.Access == AccessType.STATIC && Access != AccessType.STATIC) {
+                if (Parent is Class cls && cls.AccessType == AccessType.STATIC && AccessType != AccessType.STATIC) {
                     Program.AddError(Scanner.Current, Error.IncompatibleAccessClassStatic);
                 }
                 GetAnnotations();
             }
             if (GetName(out Token) == false) return;
-            Real = "_" + Token.Value;
+            if (Real.IsEmpty()) Real = "_" + Token.Value;
             if (full) {
                 if (Scanner.Expect(':')) {
                     GetReturnType();
@@ -50,7 +53,7 @@ namespace Run {
         public override void Parse() => Parse(true);
 
         public void ParseInitializer() {
-            Initializer = ExpressionHelper.Expression(this);
+            Initializer = ExpressionHelper.Parse(this);
             if (Initializer is NewExpression n) {
                 IsScoped = n.IsScoped;
             }

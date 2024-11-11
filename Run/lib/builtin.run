@@ -7,6 +7,7 @@ using numberHelper
 using string
 using reflection
 using array
+using math
 
 @header(stdio.h)
 @native(write($fd,$buf,$n))

@@ -4,17 +4,17 @@
         public override void Parse() {
             base.Parse();
             if (IsBased) {
-                Program.AddError(Base.Token, Error.InterfaceCannotBeBased);
+                Program.AddError(BaseType.Token, Error.InterfaceCannotBeBased);
             }
             if (HasInterfaces) {
                 Program.AddError(Interfaces[0].Token, Error.InterfaceCannotBeBased);
             }
             for (int i = Children.Count - 1; i >= 0; i--) {
                 var child = Children[i];
-                if (child.Access != AccessType.INSTANCE) {
+                if (child.AccessType != AccessType.INSTANCE) {
                     Program.AddError(child.Token, Error.InterfaceOnlyAcceptsPublicMembers);
                 }
-                if (child.Modifier == AccessModifier.PRIVATE) {
+                if (child.AccessModifier == AccessModifier.PRIVATE) {
                     Program.AddError(child.Token, Error.InterfaceNotAllowPrivateMembers);
                 }
                 switch (child) {

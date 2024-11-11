@@ -1,6 +1,4 @@
-﻿using System.IO;
-
-namespace Run {
+﻿namespace Run {
     internal class AsExpression : BinaryExpression {
         public bool IsArray;
         public AsExpression(AST parent, Expression left) : base(parent, left) {

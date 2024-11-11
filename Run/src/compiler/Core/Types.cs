@@ -81,6 +81,7 @@
         SHIFT_LEFT,
         NULL,
         IS,
+        HEX,
     }
 
     public enum IsFlags {

@@ -8,7 +8,7 @@ using primitives
 type chars { }
 
 type string: object {
-	var value:i8[] 
+	var value:i8[]
 	var hash = -1
 	var _size = -1
 
@@ -30,9 +30,9 @@ type string: object {
 	}
 
 	this(sz:i32) {
-		value = new i8[sz + 1]
-		value[sz] = 0
 		_size = sz
+		value = new i8[_size +1]
+		value[_size] = 0
 	}
 
 	@implicit
@@ -47,7 +47,9 @@ type string: object {
 
 	this(s:string) {
 		_size = s.size
-		value = s.value	
+		value = new i8[_size +1]
+		copy(value as pointer,s.value as pointer,_size)
+		value[_size] = 0
 	}
 
 	property empty: bool => size == 0

@@ -15,7 +15,7 @@ type FileWriter: FileBase, IWriter {
 	var mode:FileWriterMode
 
 	this(.path,.mode) {
-		fp = fopen(path,mode as string)
+		fp = fopen(path,mode as chars)
 		opened = true
 		ended = 0
 	}
@@ -33,8 +33,12 @@ type FileWriter: FileBase, IWriter {
 
 	function write(b:byte[], start:i32, count:i32) {
 		if ok == false => return
-		fwrite(((b as pointer) + start) as pointer,count,1,fp)
+		fwrite((b + start) as pointer,count,1,fp)
 	}
+
+	function write(c:chars) => writeInternal(c as pointer, c.size(),false)
+
+	function writeLine(c:chars) => writeInternal(c as pointer, c.size(),true)
 
 	function write(value:i32) => writeInternal(ref value,4,false)
 

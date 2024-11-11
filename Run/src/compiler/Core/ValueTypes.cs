@@ -3,6 +3,7 @@
 namespace Run {
     public class ValueType : AST {
         public Class Type;
+        public Generic Generic;
         public bool IsNull;
     }
 

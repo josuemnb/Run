@@ -9,4 +9,5 @@ interface IHashable {
 type object: IStringable, IHashable {
 	function hashCode:i32 => -1
 	function toString(): string => "Object"
+	function destroy() {}
 }

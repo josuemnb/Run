@@ -14,7 +14,7 @@ namespace Run {
             if (Scanner.Expect(')')) return;
 
             while (true) {
-                Arguments.Add(ExpressionHelper.Expression(this));
+                Arguments.Add(ExpressionHelper.Parse(this));
                 if (Scanner.Expect(',')) {
                     continue;
                 }

@@ -34,10 +34,10 @@ namespace Run {
                         }
                     } else if (Scanner.Expect("..")) {
                         HasRange = true;
-                        Condition = ExpressionHelper.Expression(this);
+                        Condition = ExpressionHelper.Parse(this);
                         goto beginOfBlock;
                     } else {
-                        current = Start = ExpressionHelper.Expression(this);
+                        current = Start = ExpressionHelper.Parse(this);
                         if (current is Iterator || current is RangeExpression) {
                             HasRange = current is RangeExpression;
                             goto beginOfBlock;
@@ -48,11 +48,11 @@ namespace Run {
                     if (Scanner.Expect("..") && Start is Var) {
                         HasRange = true;
                     }
-                    current = Condition = ExpressionHelper.Expression(this);
+                    current = Condition = ExpressionHelper.Parse(this);
                     break;
                 case 2:
                     //current = Step = new Expression(this);
-                    current = Step = ExpressionHelper.Expression(this);
+                    current = Step = ExpressionHelper.Parse(this);
                     break;
             }
             //current?.Parse();

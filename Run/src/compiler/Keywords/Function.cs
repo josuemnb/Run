@@ -15,7 +15,7 @@ namespace Run {
             Token = Scanner.Current.Clone();
             Real = "run_main";
             if (Scanner.Expect('(') && Scanner.Expect(')') == false) {
-                ParseParameters();
+                ParseParameters(null);
             }
             ParseBlock();
         }
@@ -32,7 +32,7 @@ namespace Run {
         public override void Parse() {
             SetAccess();
             if (Scanner.Expect('(') && Scanner.Expect(')') == false) {
-                ParseParameters();
+                ParseParameters(FindParent<Class>());
             }
             if (Scanner.Expect(':')) {
                 switch (Scanner.Test().Value) {
@@ -59,6 +59,10 @@ namespace Run {
                 return;
             }
             var p = Parameters.Children[0] as Parameter;
+            if (p.Type == null) {
+                Program.AddError(p.Token, Error.InvalidExpression);
+                return;
+            }
             if (p.Type.IsNative == false) {
                 //Program.AddError(a.Token, "Implicit Annotation only works with native types");
                 //return;
@@ -90,7 +94,7 @@ namespace Run {
             ExtraCall = new(0);
             if (Scanner.Expect('(') && Scanner.Expect(')') == false) {
             again:
-                ExtraCall.Add(ExpressionHelper.Expression(this));
+                ExtraCall.Add(ExpressionHelper.Parse(this));
                 if (Scanner.Expect(',')) {
                     goto again;
                 }
@@ -112,12 +116,15 @@ namespace Run {
         public bool TypeArray;
         public bool HasInterface;
         public bool HasVariadic;
+        public bool HasGeneric;
         public int Usage = 0;
+
+        public override bool HasGenerics => base.HasGenerics || HasGeneric;
 
         public override void Parse() {
             SetAccess();
             var cls = Parent as Class;
-            if (cls != null && cls.Access == AccessType.STATIC && Access != AccessType.STATIC) {
+            if (cls != null && cls.AccessType == AccessType.STATIC && AccessType != AccessType.STATIC) {
                 Program.AddError(Scanner.Current, Error.IncompatibleAccessClassStatic);
             }
             GetAnnotations();
@@ -129,7 +136,7 @@ namespace Run {
                 return;
             }
             if (Scanner.Expect('(') && Scanner.Expect(')') == false) {
-                ParseParameters();
+                ParseParameters(cls);
             }
             if (Scanner.Expect(':')) {
                 GetReturnType();
@@ -204,7 +211,7 @@ namespace Run {
             base.ParseBlock(once);
         }
 
-        protected void ParseParameters() {
+        protected void ParseParameters(Class cls) {
             Parameters = Add<Block>();
         again:
             if (HasVariadic) {
@@ -232,7 +239,17 @@ namespace Run {
                     Program.AddError(Scanner.Current, Error.ExpectingAssign);
                     return;
                 }
-                param.GetReturnType();
+                if (param.GetReturnType() == false) {
+                    Program.AddError(Scanner.Current, Error.InvalidExpression);
+                    return;
+                }
+                if (cls?.HasGenerics == true) {
+                    if (cls.Generics.Find(g => g.Token.Value == param.Type.Token.Value) is Generic gen) {
+                        Generics ??= new(1);
+                        Generics.Add(gen);
+                        param.Generic = gen;
+                    }
+                }
             }
             if (Scanner.Expect(',')) goto again;
             if (Scanner.Expect(')') == false) {

@@ -5,11 +5,14 @@ namespace Run {
     public enum PrecedenceLevel {
         None,
         Assignment, // =
+        Ternary,    // ? :
         Or,         // or
         And,        // and
-        Ternary,    // ? :
+        BitwiseOr,  // |
+        BitwiseAnd, // &
         Equality,   // == !=
         Comparison, // < > <= >=
+        Shift,      // << >>
         Term,       // + -
         Factor,     // * /
         Unary,      // ! -
@@ -41,6 +44,12 @@ namespace Run {
                 case TokenType.DOT:
                 case TokenType.OPEN_ARRAY:
                 case TokenType.OPEN_PARENTESES: return (int)PrecedenceLevel.Call;
+                case TokenType.SHIFT_LEFT:
+                case TokenType.SHIFT_RIGHT: return (int)PrecedenceLevel.Shift;
+                case TokenType.BITWISE_AND:
+                    return (int)PrecedenceLevel.BitwiseAnd;
+                case TokenType.BITWISE_OR:
+                    return (int)PrecedenceLevel.BitwiseOr;
                 case TokenType.ASSIGN:
                 case TokenType.PLUS_ASSIGN:
                 case TokenType.MINUS_ASSIGN:
@@ -64,21 +73,41 @@ namespace Run {
         public override void Print() {
             ExpressionHelper.Print(this);
         }
+
+        public Expression Clone() {
+            return (Expression)MemberwiseClone();
+        }
+
+        public void ParseGeneric(Token token) {
+            var cls = FindParent<Class>();
+            if (cls == null || cls?.HasGenerics == false) return;
+
+            if (cls.Generics.Find(g => g.Token.Value == Token.Value) is Generic gen) {
+                var func = FindParent<Function>();
+                if (Generic != null) {
+                    Program.AddError(token, Error.InvalidExpression);
+                    Scanner.SkipLine();
+                    return;
+                }
+                func.HasGeneric = true;
+                Generic = gen;
+            }
+        }
     }
 
     internal class AssignExpression : BinaryExpression {
 
         public AssignExpression(AST parent, Expression left) : base(parent, left) {
-            Right = ExpressionHelper.Expression(this);
+            Right = ExpressionHelper.Parse(this);
         }
     }
 
     internal class RangeExpression : BinaryExpression {
         public RangeExpression(AST parent) : base(parent) {
-            Right = ExpressionHelper.Expression(this);
+            Right = ExpressionHelper.Parse(this);
         }
         public RangeExpression(AST parent, Expression left) : base(parent, left) {
-            Right = ExpressionHelper.Expression(this);
+            Right = ExpressionHelper.Parse(this);
         }
     }
 
@@ -103,7 +132,7 @@ namespace Run {
                 Parent = this,
             };
             Var.SetParent(this);
-            Content = ExpressionHelper.Expression(this);
+            Content = ExpressionHelper.Parse(this);
         }
     }
 
@@ -111,7 +140,7 @@ namespace Run {
         public Expression Content;
 
         public override void Parse() {
-            Content = ExpressionHelper.Expression(this);
+            Content = ExpressionHelper.Parse(this);
         }
     }
 
@@ -128,7 +157,7 @@ namespace Run {
         public ParentesesExpression(AST parent) {
             SetParent(parent);
             Token = Scanner.Current;
-            Content = ExpressionHelper.Expression(this);
+            Content = ExpressionHelper.Parse(this);
             if (Scanner.Expect(')') == false) {
                 //throw new Exception("Expected )");
                 Program.AddError(Scanner.Current, Error.ExpectingCloseParenteses);
@@ -145,17 +174,17 @@ namespace Run {
             Token = Scanner.Current;
             Condition = condition;
             Condition.SetParent(this);
-            True = ExpressionHelper.Expression(parent);
+            True = ExpressionHelper.Parse(parent);
             if (Scanner.Expect(':') == false) {
                 throw new Exception("Expected :");
             }
-            False = ExpressionHelper.Expression(parent);
+            False = ExpressionHelper.Parse(parent);
         }
     }
 
     internal class IndexerExpression : BinaryExpression {
         public IndexerExpression(AST parent, Expression left) : base(parent, left) {
-            Right = ExpressionHelper.Expression(parent);
+            Right = ExpressionHelper.Parse(parent);
             if (Scanner.Expect(']') == false) {
                 //throw new Exception("Expected ]");
                 Program.AddError(Scanner.Current, Error.ExpectingEndOfArray);
@@ -167,7 +196,7 @@ namespace Run {
         public ArrayCreationExpression(AST parent) {
             SetParent(parent);
             Token = Scanner.Current;
-            Content = ExpressionHelper.Expression(this);
+            Content = ExpressionHelper.Parse(this);
             if (Scanner.Expect(']') == false) {
                 Program.AddError(Scanner.Current, Error.ExpectingEndOfArray);
             }
@@ -182,7 +211,7 @@ namespace Run {
         public DotExpression(AST parent, Expression left, Expression expression) : base(parent, left, expression) {
         }
         public DotExpression(AST parent, Expression left) : base(parent, left) {
-            Right = ExpressionHelper.Expression(this, (int)PrecedenceLevel.Call);
+            Right = ExpressionHelper.Parse(this, (int)PrecedenceLevel.Call);
         }
     }
 
@@ -213,6 +242,7 @@ namespace Run {
             SetParent(parent);
             Token = Scanner.Current;
             Real = "_" + Token.Value;
+            ParseGeneric(Token);
         }
     }
 
@@ -222,7 +252,7 @@ namespace Run {
             AtRight = atRight;
             SetParent(parent);
             Token = Scanner.Current;
-            Content = ExpressionHelper.Expression(parent, (int)PrecedenceLevel.Unary);
+            Content = ExpressionHelper.Parse(parent, (int)PrecedenceLevel.Unary);
         }
         public UnaryExpression(AST parent, Expression left, bool atRight = false) {
             AtRight = atRight;

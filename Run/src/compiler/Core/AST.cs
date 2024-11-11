@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.IO;
 
 namespace Run {
     public enum AccessModifier {
@@ -11,8 +10,14 @@ namespace Run {
     }
 
     public enum AccessType {
-        INSTANCE,
-        STATIC,
+        INSTANCE = 0,
+        STATIC = 1,
+    }
+
+    public enum MemberModifier {
+        NORMAL,
+        VIRTUAL,
+        OVERRIDE,
     }
     public class AST {
         internal int Level = 0;
@@ -25,18 +30,17 @@ namespace Run {
         internal bool Validated;
         internal bool IsNative;
 
-        internal static AccessModifier CurrentModifier = AccessModifier.PUBLIC;
-        internal static AccessType CurrentAccess = AccessType.INSTANCE;
+        internal static AccessModifier CurrentAccessModifier = AccessModifier.PUBLIC;
+        internal static AccessType CurrentAccessType = AccessType.INSTANCE;
+        internal static MemberModifier CurrentMemberModifier = MemberModifier.NORMAL;
 
-        //public List<Generic> Generics;
+        public List<Generic> Generics;
         internal List<Annotation> Annotations;
-        //public bool IsNullable { get; internal set; }
-        internal AccessModifier Modifier { get; set; }
-        internal AccessType Access { get; set; }
+        internal AccessModifier AccessModifier { get; set; }
+        internal MemberModifier MemberModifier { get; set; }
+        internal AccessType AccessType { get; set; }
 
-        //public bool HasGenerics {
-        //    get => (Generics != null && Generics.Count > 0);
-        //}
+        public virtual bool HasGenerics => Generics?.Count > 0;
 
         internal static readonly AST NewLine = new();
         internal static readonly AST Empty = new() { Token = Token.Empty };
@@ -45,14 +49,16 @@ namespace Run {
         }
 
         public void SetAccess() {
-            if (CurrentAccess == AccessType.STATIC && (this is Module)) {
+            if (CurrentAccessType == AccessType.STATIC && (this is Module)) {
                 Program.AddError(Scanner.Current, Error.InvalidAccessDefinition);
                 return;
             }
-            Modifier = CurrentModifier;
-            Access = CurrentAccess;
-            CurrentModifier = AccessModifier.PUBLIC;
-            CurrentAccess = AccessType.INSTANCE;
+            MemberModifier = CurrentMemberModifier;
+            AccessModifier = CurrentAccessModifier;
+            AccessType = CurrentAccessType;
+            CurrentAccessModifier = AccessModifier.PUBLIC;
+            CurrentAccessType = AccessType.INSTANCE;
+            CurrentMemberModifier = MemberModifier.NORMAL;
         }
 
         public void SetParent(AST parent) {
@@ -137,6 +143,11 @@ namespace Run {
                                     }
                                 }
                             }
+                            if (this is Var v) {
+                                v.IsNative = true;
+                                v.Real = a.Value;
+                                break;
+                            }
                         }
                         break;
                 }
@@ -150,19 +161,18 @@ namespace Run {
             Console.WriteLine(new string(' ', ast.Level * 2) + "[" + ast.GetType().Name + "] " + ast.Token?.Value);
         }
 
-        public static List<Generic> ParseGenerics(AST ast) {
-            var generics = new List<Generic>(0);
+        public virtual void ParseGenerics() {
+            Generics = new List<Generic>(0);
         again:
             var gen = new Generic();
-            gen.SetParent(ast);
+            gen.SetParent(this);
             gen.Parse();
 
-            generics.Add(gen);
-            if (ast.Scanner.Expect(',')) goto again;
-            if (ast.Scanner.Expect('>') == false) {
-                ast.Program.AddError(ast.Scanner.Current, "Expecting >");
+            Generics.Add(gen);
+            if (Scanner.Expect(',')) goto again;
+            if (Scanner.Expect('>') == false) {
+                Program.AddError(Scanner.Current, "Expecting >");
             }
-            return generics;
         }
 
         //public virtual void Save(TextWriter writer, Builder builder) {

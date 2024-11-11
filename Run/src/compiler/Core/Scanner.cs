@@ -45,8 +45,12 @@ namespace Run {
 
         internal Token Test() {
             var current = Current;
+            var line = Line;
+            var column = Column;
             if (GetTokenInternal(out Token t)) {
                 RollBack(t);
+                Line = line;
+                Column = column;
                 Current = current;
                 return t;
             }
@@ -193,9 +197,10 @@ namespace Run {
                 Line = Line,
                 Position = Position,
             };
-            if (!IsValidCharacter(Current)) {
-                return false;
-            }
+            //if (!IsValidCharacter(Current)) {
+            //    return false;
+            //}
+            Position++;
             Column += Current.Value.Length;
             return true;
         }
@@ -423,7 +428,24 @@ namespace Run {
             }
         }
 
+        bool IsHexaDecimal(Token tok) {
+            if (!Valid || Position + 1 >= Data.Length) return false;
+            if (Data[Position] != '0' || (Data[Position + 1] != 'x' && Data[Position + 1] != 'X')) return false;
+            var start = Position;
+            Position += 2;
+            while (Valid && (char.IsDigit(Data[Position]) || (Data[Position] >= 'a' && Data[Position] <= 'f') || (Data[Position] >= 'A' && Data[Position] <= 'F'))) {
+                Position++;
+            }
+            tok.Value = Data[start..Position];
+            tok.Type = TokenType.HEX;
+            tok.Family = TokenType.LITERAL;
+            return true;
+        }
+
         void GetNumber(Token tok, bool positive) {
+            if (IsHexaDecimal(tok)) {
+                return;
+            }
             var start = Position;
             tok.Type = TokenType.NUMBER;
             tok.Family = TokenType.LITERAL;
@@ -675,30 +697,34 @@ namespace Run {
                 case '&':
                     len = 1;
                     tok.Type = TokenType.BITWISE_AND;
-                    tok.Family = TokenType.LOGICAL;
+                    tok.Family = TokenType.BITWISE;
                     if (Valid && Data[Position + 1] == '&') {
+                        tok.Family = TokenType.LOGICAL;
                         tok.Type = TokenType.AND;
                         Position++;
                         len = 2;
                     } else if (Valid && Data[Position + 1] == '=') {
-                        len = 2;
+                        tok.Family = TokenType.LOGICAL;
                         tok.Type = TokenType.AND_ASSIGN;
                         Position++;
+                        len = 2;
                     }
                     tok.Value = Data.Substring(start, len);
                     break;
                 case '|':
                     len = 1;
                     tok.Type = TokenType.BITWISE_OR;
-                    tok.Family = TokenType.LOGICAL;
+                    tok.Family = TokenType.BITWISE;
                     if (Valid && Data[Position + 1] == '|') {
+                        tok.Family = TokenType.LOGICAL;
                         tok.Type = TokenType.OR;
                         Position++;
                         len = 2;
                     } else if (Valid && Data[Position + 1] == '=') {
-                        len = 2;
+                        tok.Family = TokenType.LOGICAL;
                         tok.Type = TokenType.OR_ASSIGN;
                         Position++;
+                        len = 2;
                     }
                     tok.Value = Data.Substring(start, len);
                     break;

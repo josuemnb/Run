@@ -240,7 +240,7 @@ namespace Run {
         void SaveStaticClassMembers(Class cls) {
             if (cls.Children == null) return;
             foreach (var child in cls.Children) {
-                if (child is Field f && f.Access == AccessType.STATIC) {
+                if (child is Field f && f.AccessType == AccessType.STATIC) {
                     f.Real = cls.Token.Value + f.Real;
                     Save(f);
                     if (f.Initializer != null) {
@@ -256,7 +256,7 @@ namespace Run {
         void SaveClassesDeclarations() {
             foreach (var cls in Builder.Classes.Values.OrderBy(e => e.BaseCount)) {
                 SaveStaticClassMembers(cls);
-                if (cls.Usage == 0 || cls.IsPrimitive || cls.Access == AccessType.STATIC) {
+                if (cls.Usage == 0 || cls.IsPrimitive || cls.AccessType == AccessType.STATIC) {
                     continue;
                 }
                 if (cls.IsEnum) {
@@ -305,7 +305,7 @@ namespace Run {
             Writer.Write(cls.Real);
             if (cls.IsBased) {
                 Writer.Write(": public ");
-                Writer.Write(cls.Base.Real);
+                Writer.Write(cls.BaseType.Real);
             }
             Writer.WriteLine(" {");
             if (cls.Children != null) {
@@ -318,7 +318,7 @@ namespace Run {
                             Save(func, true);
                             break;
                         case Var v:
-                            if (v.Access == AccessType.STATIC) {
+                            if (v.AccessType == AccessType.STATIC) {
                                 continue;
                             }
                             Writer.Write("\t");
@@ -357,7 +357,7 @@ namespace Run {
             bool ok = false;
             Writer.WriteLine();
             foreach (var cls in Builder.Classes.Values.OrderBy(e => e.BaseCount)) {
-                if (cls.IsNative || cls.Access == AccessType.STATIC) continue;
+                if (cls.IsNative || cls.AccessType == AccessType.STATIC) continue;
                 if (cls.IsEnum) continue;
                 if (cls.Usage == 0) continue;
                 Writer.Write("class ");
@@ -381,7 +381,7 @@ namespace Run {
                 Writer.Write("#define ");
                 Writer.Write(enm.Real);
                 Writer.Write(" ");
-                Writer.WriteLine(enm.Base.Real);
+                Writer.WriteLine(enm.BaseType.Real);
                 SaveEnum(enm);
                 ok = true;
             }
@@ -413,7 +413,7 @@ namespace Run {
         bool SaveFunctionsPrototypes() {
             bool ok = false;
             foreach (Function func in Builder.Functions.Values) {
-                if (func.IsNative || func is Constructor ctor && ctor.Type.Access == AccessType.STATIC) {
+                if (func.IsNative || func is Constructor ctor && ctor.Type.AccessType == AccessType.STATIC) {
                     continue;
                 }
                 if (func.Usage == 0) {
@@ -427,7 +427,7 @@ namespace Run {
         }
         void SaveFunctionsImplementations() {
             foreach (Function func in Builder.Functions.Values) {
-                if (func.IsNative || func is Constructor ctor && ctor.Type.Access == AccessType.STATIC) {
+                if (func.IsNative || func is Constructor ctor && ctor.Type.AccessType == AccessType.STATIC) {
                     continue;
                 }
                 if (func.Usage == 0) {
@@ -658,7 +658,7 @@ namespace Run {
 
         void SaveAcessType(AST ast) {
             if (ast == null) return;
-            switch (ast.Access) {
+            switch (ast.AccessType) {
                 case AccessType.STATIC:
                     Writer.Write("static ");
                     break;
@@ -667,7 +667,7 @@ namespace Run {
 
         void SaveAccessModifier(AST ast) {
             if (ast == null) return;
-            switch (ast.Modifier) {
+            switch (ast.AccessModifier) {
                 case AccessModifier.PUBLIC:
                     Writer.Write("public: ");
                     break;
@@ -752,7 +752,7 @@ namespace Run {
                         }
                     }
                     if (found == false) {
-                        Writer.Write(cls.Base.Real);
+                        Writer.Write(cls.BaseType.Real);
                         Writer.WriteLine("_this(this);");
                     }
                 }
@@ -1153,13 +1153,13 @@ namespace Run {
             if (exp.From != null) {
                 switch (exp.From) {
                     case Field f: {
-                            if (f.Access != AccessType.STATIC && (exp.Parent is not DotExpression || exp.Parent is DotExpression dot && dot.Left == exp)) {
+                            if (f.AccessType != AccessType.STATIC && (exp.Parent is not DotExpression || exp.Parent is DotExpression dot && dot.Left == exp)) {
                                 Writer.Write("this->");
                             }
                         }
                         break;
                     case GetterSetter p: {
-                            if (p.Access != AccessType.STATIC && (exp.Parent is not DotExpression || exp.Parent is DotExpression dot && dot.Left == exp)) {
+                            if (p.AccessType != AccessType.STATIC && (exp.Parent is not DotExpression || exp.Parent is DotExpression dot && dot.Left == exp)) {
                                 Writer.Write(p.Getter.Real);
                                 Writer.Write("(");
                                 Writer.Write("this");
@@ -1234,7 +1234,7 @@ namespace Run {
         }
 
         void SaveAcess(CallExpression exp) {
-            if (exp.Function.Access == AccessType.STATIC) {
+            if (exp.Function.AccessType == AccessType.STATIC) {
                 Writer.Write("::");
                 return;
             } else if (exp.Caller is IdentifierExpression id && id.From is Var v) {

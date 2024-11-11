@@ -13,6 +13,32 @@ namespace Run {
             return expression.Parent is Expression exp ? FindAssignment(exp) : null;
         }
 
+        public static Expression Clone(Expression expression) {
+            if (expression == null) return null;
+
+            var clone = expression.Clone();
+            clone.Token = expression.Token.Clone();
+            switch (expression) {
+                case BinaryExpression bin:
+                    var cloneBin = clone as BinaryExpression;
+                    cloneBin.Left = Clone(bin.Left);
+                    cloneBin.Right = Clone(bin.Right);
+                    break;
+                case CallExpression call:
+                    var cloneCall = clone as CallExpression;
+                    cloneCall.Arguments = new List<Expression>();
+                    foreach (var item in call.Arguments) {
+                        cloneCall.Arguments.Add(Clone(item));
+                    }
+                    break;
+                case ContentExpression content:
+                    var cloneContent = clone as ContentExpression;
+                    cloneContent.Content = Clone(content.Content);
+                    break;
+            }
+            return clone;
+        }
+
         public static IEnumerable<T> FindChildren<T>(Expression expression) {
             if (expression is T t) yield return t;
             if (expression is BinaryExpression bin) {
@@ -21,6 +47,13 @@ namespace Run {
                 }
                 foreach (var item in FindChildren<T>(bin.Right)) {
                     yield return item;
+                }
+            }
+            if (expression is CallExpression call && call.Arguments != null) {
+                foreach (var item in call.Arguments) {
+                    foreach (var child in FindChildren<T>(item)) {
+                        yield return child;
+                    }
                 }
             }
             if (expression is ContentExpression content) {
@@ -58,6 +91,7 @@ namespace Run {
                 case TokenType.NULL:
                 case TokenType.REAL:
                 case TokenType.CHAR:
+                case TokenType.HEX:
                     return new LiteralExpression(parent);
                 case TokenType.NAME:
                     return Name(parent);
@@ -85,6 +119,7 @@ namespace Run {
                 case TokenType.NULL:
                 case TokenType.REAL:
                 case TokenType.CHAR:
+                case TokenType.HEX:
                     return new LiteralExpression(parent);
                 case TokenType.DOT:
                     //return new DotExpression(parent, left);
@@ -134,7 +169,11 @@ namespace Run {
                 case TokenType.LOWER_OR_EQUAL:
                 case TokenType.GREATHER:
                 case TokenType.GREAT_OR_EQUAL:
-                    return Expression(parent, parent.Scanner.Current.Type.Precedence());
+                case TokenType.SHIFT_RIGHT:
+                case TokenType.SHIFT_LEFT:
+                case TokenType.BITWISE_AND:
+                case TokenType.BITWISE_OR:
+                    return Parse(parent, parent.Scanner.Current.Type.Precedence());
             }
             return null;
         }
@@ -142,7 +181,8 @@ namespace Run {
         private static Expression MemberAcess(AST parent, Expression left) {
             while (parent.Scanner.Test().Type == TokenType.NAME) {
                 parent.Scanner.Scan();
-                left = new DotExpression(parent, left, new IdentifierExpression(parent));
+                var id = new IdentifierExpression(parent);
+                left = new DotExpression(parent, left, id);
                 if (parent.Scanner.Expect('.') == false) {
                     break;
                 }
@@ -166,7 +206,7 @@ namespace Run {
             }
         }
 
-        public static Expression Expression(AST parent, int precedence = 1) {
+        public static Expression Parse(AST parent, int precedence = 1) {
             parent.Scanner.Scan();
             var left = Prefix(parent);
 

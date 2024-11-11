@@ -14,7 +14,7 @@ namespace Run {
             if (Scanner.Expect('{')) {
                 base.Parse();
             } else {
-                Expression = ExpressionHelper.Expression(this);
+                Expression = ExpressionHelper.Parse(this);
             }
         }
     }

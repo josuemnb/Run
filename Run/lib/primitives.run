@@ -23,41 +23,53 @@ type pointer { }
 type i64 { 
 	function toString:chars => NumberHelper.toString(this, 21)
 
-	static var max:i64 => 9223372036854775807
-	static var min:i64 => -9223372036854775807
+	static var max:i64 = 9223372036854775807
+	static var min:i64 = -9223372036854775807
 }
 
 @primitive
 @number
 @native(int)
-type i32: object {
+type i32 {
 	function toString:chars => NumberHelper.toString(this as i64, 11)	
 	function hashCode:i32 => ref this
 
-	static var max:i32 => 2147483647
-	static var min:i32 => -2147483648
+	static var max:i32 = 2147483647
+	static var min:i32 = -2147483648
+
+	function reverse:i32 {
+		var r = 0
+		var n = this
+		for i in 0..4 {
+			r = r << 8
+			r = r | (n & 0xFF)
+			n = n >> 8
+		}
+		return r
+	
+	}
 }
 
 @primitive
 @number
 @native(short)
-type i16: object { 
+type i16 { 
 	function toString:chars => NumberHelper.toString(this as i64, 7)	
 	function hashCode:i32 => ref this
 
-	static var max:i16 => 32767
-	static var min:i16 => -32768
+	static var max:i16 = 32767
+	static var min:i16 = -32768
 }
 
 @primitive
 @number
 @native(char)
-type i8: object { 
+type i8 { 
 	function toString:chars => NumberHelper.toString(this as i64, 5)	
 	function hashCode:i32 => ref this
 
-	static var max:i8 => 127
-	static var min:i8 => -128
+	static var max:i8 = 127
+	static var min:i8 = -128
 
 	property isDigit:bool => this >= '0' && this <= '9'
 	property isAlpha:bool => (this >= 'a' && this <= 'z') || (this >= 'A' && this <= 'Z')
@@ -85,50 +97,50 @@ type i8: object {
 @primitive
 @native(unsigned long long)
 @number
-type u64: object { 
+type u64 { 
 	function toString:chars => NumberHelper.toString(this as u64, 21)	
 	function hashCode:i32 => ref this
 
-	static var max:u64 => 18446744073709551614
-	static var min:u64 => 0
+	static var max:u64 = 18446744073709551614
+	static var min:u64 = 0
 }
 
 @primitive
 @number
 @native(unsigned int)
-type u32: object{ 
+type u32{ 
 	function toString:chars => NumberHelper.toString(this as u64, 11)	
 	function hashCode:i32 => ref this
 
-	static var max:u32 => 4294967295
-	static var min:u32 => 0
+	static var max:u32 = 4294967295
+	static var min:u32 = 0
 }
 
 @primitive
 @number
 @native(unsigned short)
-type u16: object { 
+type u16 { 
 	function toString:chars => NumberHelper.toString(this as u64, 7)	
 	function hashCode:i32 => ref this
 
-	static var max:u16 => 65535
-	static var min:u16 => 0
+	static var max:u16 = 65535
+	static var min:u16 = 0
 }
 
 @primitive
 @number
 @native(unsigned char)
-type u8: object { 
+type u8 { 
 	function toString:chars => NumberHelper.toString(this as u64, 5)
 	function hashCode:i32 => ref this
 
-	static var max:u8 => 255
-	static var min:u8 => 0
+	static var max:u8 = 255
+	static var min:u8 = 0
 }
 
 @primitive
 @native(unsigned char)
-type bool: object { 
+type bool { 
 	function toString:chars => this ? "true" : "false"
 	function hashCode:i32 => ref this
 }
@@ -136,7 +148,7 @@ type bool: object {
 @primitive
 @number
 @native(float)
-type f32: object { 
+type f32 { 
 	function toString: chars {	
 		var s = new i8[40] as chars
 		sprintf(s, "%f", this)
@@ -144,14 +156,14 @@ type f32: object {
 	}	
 	function hashCode:i32 => ref this
 
-	static var max:f32 => 3.402823466e+38
-	static var min:f32 => -3.402823466e+38
+	static var max:f32 = 3.402823466e+38
+	static var min:f32 = -3.402823466e+38
 }
 
 @primitive
 @number
 @native(double)
-type f64: object { 
+type f64 { 
 	function toString: chars {	
 		var s = new i8[310] as chars
 		sprintf(s, "%f", this)
@@ -159,8 +171,8 @@ type f64: object {
 	}
 	function hashCode:i32 => ref this
 
-	static var max:f64 => 1.7976931348623157e+308
-	static var min:f64 => -1.7976931348623157e+308
+	static var max:f64 = 1.7976931348623157e+308
+	static var min:f64 = -1.7976931348623157e+308
 }
 
 @primitive
@@ -171,3 +183,11 @@ type byte { }
 @primitive
 @native(wchar_t)
 type char { }
+
+extension chars {
+	function size():i32 {
+		var i = 0
+		for this[i] => i++
+		return i
+	}
+}

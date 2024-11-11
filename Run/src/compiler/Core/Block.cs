@@ -35,16 +35,10 @@ namespace Run {
                         Scanner.SkipLine();
                         continue;
                     case TokenType.NAME: ParseName(token); break;
-                    //case TokenType.INCREMENT:
-                    //case TokenType.DECREMENT:
-                    //case TokenType.OPEN_PARENTESES:
                     default:
                         Scanner.RollBack();
-                        //Add<Expression>().Parse();
-                        Add(ExpressionHelper.Expression(this));
+                        Add(ExpressionHelper.Parse(this));
                         break;
-                        //Program.AddError(token, Error.InvalidExpression);
-                        //break;
                 }
                 if (once) return;
             }
@@ -167,7 +161,7 @@ namespace Run {
             }
             Scanner.RollBack();
             //Add<Expression>().Parse();
-            Add(ExpressionHelper.Expression(this));
+            Add(ExpressionHelper.Parse(this));
         }
 
         public override void Print() {

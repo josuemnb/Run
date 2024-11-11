@@ -19,7 +19,7 @@ namespace Run {
                 }
                 var bin = new BinaryExpression(this, new IdentifierExpression(this) {
                     Token = token,
-                }, ExpressionHelper.Expression(this, 0));
+                }, ExpressionHelper.Parse(this, 0));
                 if (Scanner.Scan().Type == TokenType.COMMA) {
                     continue;
                 }

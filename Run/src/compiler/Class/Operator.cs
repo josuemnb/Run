@@ -6,11 +6,11 @@ namespace Run {
             (Parent as Class).HasOperators = true;
             SetAccess();
             bool err = false;
-            if (Access != AccessType.INSTANCE) {
+            if (AccessType != AccessType.INSTANCE) {
                 Program.AddError(Scanner.Current, Error.ExpectedStaticAcess);
                 err = true;
             }
-            if (Modifier != AccessModifier.PUBLIC) {
+            if (AccessModifier != AccessModifier.PUBLIC) {
                 Program.AddError(Scanner.Current, Error.ExpectedPublicAcces);
                 err = true;
             }
@@ -34,7 +34,7 @@ namespace Run {
                 Scanner.SkipBlock();
                 return;
             }
-            ParseParameters();
+            ParseParameters(Parent as Class);
             if (Scanner.Expect(':')) {
                 GetReturnType();
             }

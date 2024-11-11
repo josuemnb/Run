@@ -164,7 +164,7 @@
             }
             //var exp = func.Add<Expression>();
             //exp.Parse();
-            func.Add(ExpressionHelper.Expression(func));
+            func.Add(ExpressionHelper.Parse(func));
         }
     }
 

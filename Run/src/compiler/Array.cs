@@ -12,7 +12,7 @@ namespace Run {
             }
         again:
             if (Scanner.Peek() != ']' && Scanner.Peek() != ',')
-                Arguments.Add(ExpressionHelper.Expression(this));
+                Arguments.Add(ExpressionHelper.Parse(this));
             if (Scanner.Expect(',')) {
                 goto again;
             }

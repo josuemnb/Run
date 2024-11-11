@@ -1,5 +1,4 @@
 ﻿using System.Diagnostics;
-using System.IO;
 
 namespace Run {
     internal class NewExpression : ContentExpression {
@@ -27,6 +26,16 @@ namespace Run {
                 break;
             }
             Token.Value = QualifiedName;
+            if (Scanner.Expect('<')) {
+                if (HasGenerics || Generic != null) {
+                    Program.AddError(Scanner.Current, Error.InvalidExpression);
+                    Scanner.SkipLine();
+                    return;
+                }
+                ParseGenerics();
+            } else {
+                ParseGeneric(Scanner.Current);
+            }
             if (Scanner.Expect('(')) {
                 Content = new ConstructorExpression(this) {
                     Token = Token,
@@ -35,6 +44,8 @@ namespace Run {
                 Content = new ArrayCreationExpression(this) {
                     Token = Token,
                 };
+            } else {
+                Debugger.Break();
             }
         }
     }

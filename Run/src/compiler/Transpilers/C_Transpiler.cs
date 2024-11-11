@@ -54,7 +54,8 @@ namespace Run {
                 bool IS(int address, int is);
 
                 #define SCOPE(T,id)  ArenaScope(sizeof(T),id))
-                #define DELETE(V) ArenaFree(V); V = 0
+                //#define DELETE(V) ArenaFree(V); V = 0
+                #define DELETE(V) free(V); V = 0
                 #define CAST(T,exp) (*(T*)exp)
                 #define SIZEOF(V) (int)((char *)(&V+1)-(char*)(&V))
                 #define CONVERT(T,ptr) *((T*)ptr)
@@ -68,7 +69,8 @@ namespace Run {
                 #define ENDTRY } } while (0)
                 #define THROW(j,x) longjmp(j, x)
 
-                #define NEW(T,total,id, region) (T*)ArenaAlloc(sizeof(T)*total,region, id)
+                //#define NEW(T,total,id, region) (T*) ArenaAlloc(sizeof(T)*total,region, id)
+                #define NEW(T,total,id, region) (T*) malloc(sizeof(T) * total)
 
                 int* mapAlloc;
                 int mapSize = 0;
@@ -245,27 +247,26 @@ namespace Run {
             Writer.Write("\", .id = ");
             Writer.Write(cls.ID);
             Writer.Write(", .based = ");
-            Writer.Write(cls.Base?.ID ?? -1);
+            Writer.Write(cls.BaseType?.ID ?? -1);
             Writer.Write(", .count = ");
-            //if (cls.Access == AccessType.STATIC || cls.Usage == 0) {
-            //    Writer.WriteLine("0, NULL\n};");
-            //    return;
-            //}
+            if (cls.IsNative) {
+                Writer.WriteLine("0, NULL\n};");
+                return;
+            }
             //var children = cls.Children.Where(c => c.Access != AccessType.STATIC && (c is Var v && v.Usage > 0 || c is Function f && f.Usage > 0)).ToList();
             var children = cls.Children.ToList();
             Writer.Write(children.Count);
             if (children.Count > 0) {
-                Writer.Write(", .children = \n\t(ReflectionMember[");
-                //Writer.Write(children.Count);
-                Writer.Write("]) {");
+                Writer.Write(", .children = \n\t(ReflectionMember[]) {");
                 bool started = false;
                 foreach (var child in children) {
-                    if (child.Access == AccessType.STATIC) continue;
-                    //switch (child) {
-                    //    case Var v when v.Usage == 0:
-                    //    case Function f when f.Usage == 0:
-                    //        continue;
-                    //}
+                    if (child.AccessType == AccessType.STATIC) continue;
+                    switch (child) {
+                        case Var v when v.Generic != null:
+                            continue;
+                        case Function f when f.HasGenerics:
+                            continue;
+                    }
                     if (cls.Token.Value == "ReflectionType") continue;
                     if (cls.Token.Value == "ReflectionMember") continue;
                     if (cls.Token.Value == "ReflectionArgument") continue;
@@ -280,8 +281,7 @@ namespace Run {
             }
         }
         void SaveReflectionMember(AST child, Class cls) {
-            Writer.WriteLine("\n\t\t{");
-            Writer.Write("\t\t\t.name = \"");
+            Writer.Write("\n\t\t{ .name = \"");
             Writer.Write(child.Token.Value);
             Writer.Write("\", .offset = ");
             if (child is Var && child is not GetterSetter) {
@@ -299,6 +299,11 @@ namespace Run {
                 Writer.Write(", .kind = ");
                 var arg = false;
                 switch (child) {
+                    case EnumMember em:
+                        Writer.Write("REFLETION_FIELD, .id = ");
+                        Writer.Write(em.Type.ID);
+                        Writer.Write(", .array = 0, .function = NULL, .count = 0, .args = NULL");
+                        break;
                     case Property p:
                         Writer.Write("REFLETION_PROPERTY, .id = ");
                         Writer.Write(p.Type.ID);
@@ -309,14 +314,14 @@ namespace Run {
                         Writer.Write(x.Type.ID);
                         Writer.Write(", .array = ");
                         Writer.Write(x.Index.Type.ID);
-                        Writer.Write(", .function = NULL, .count = 0, .args = NULL\n\t\t");
+                        Writer.Write(", .function = NULL, .count = 0, .args = NULL ");
                         break;
                     case Field v:
                         Writer.Write("REFLETION_FIELD, .id = ");
                         Writer.Write(v.Type.ID);
                         Writer.Write(", .array = ");
                         Writer.Write(v.Arguments?.Count ?? 0);
-                        Writer.Write(", .function = NULL, .count = 0, .args = NULL\n\t\t");
+                        Writer.Write(", .function = NULL, .count = 0, .args = NULL ");
                         break;
                     case Function f:
                         Writer.Write(f is Constructor ? "REFLETION_CONSTRUCTOR" : "REFLETION_FUNCTION");
@@ -325,14 +330,12 @@ namespace Run {
                         Writer.Write(", .array = ");
                         Writer.Write(f.TypeArray ? 1 : 0);
                         Writer.Write(", .function = ");
-                        Writer.Write(f is Constructor ctor && ctor.Type.Access == AccessType.STATIC ? "NULL" : f.Real);
+                        Writer.Write(f is Constructor ctor && ctor.Type.AccessType == AccessType.STATIC ? "NULL" : f.Real);
                         Writer.Write(", .count = ");
                         if (f.Parameters != null) {
                             arg = true;
                             Writer.Write(f.Parameters?.Children?.Count ?? 0);
-                            Writer.Write(",\n\t\t\t.args = (ReflectionArgument[");
-                            //Writer.Write(f.Parameters.Children.Count);
-                            Writer.Write("]) {");
+                            Writer.Write(",\n\t\t\t.args = (ReflectionArgument[]) {");
                             for (int p = 0; p < f.Parameters.Children.Count; p++) {
                                 var param = f.Parameters.Children[p] as Parameter;
                                 if (p > 0) Writer.Write(", ");
@@ -344,14 +347,14 @@ namespace Run {
                                 Writer.Write(param.Arguments?.Count ?? 0);
                                 Writer.Write("}");
                             }
-                            Writer.Write("\n\t\t\t},");
+                            Writer.Write(" },");
                         } else {
-                            Writer.Write("0, .args = NULL\n\t\t");
+                            Writer.Write("0, .args = NULL ");
                         }
                         break;
                 }
                 if (arg) {
-                    Writer.Write("\n\t\t");
+                    //Writer.Write("\n\t\t");
                 }
             }
             Writer.Write("}");
@@ -367,7 +370,7 @@ namespace Run {
 
             foreach (var cls in Builder.Classes.Values) {
                 if (cls.IsEnum) continue;
-                if (/*cls.IsPrimitive || */cls.Access == AccessType.STATIC) continue;
+                if (/*cls.IsPrimitive || */cls.AccessType == AccessType.STATIC) continue;
                 if (cls.Usage == 0) continue;
                 Writer.Write(cls.Real);
                 Writer.Write("* CHECK_");
@@ -536,12 +539,12 @@ namespace Run {
                     //Writer.Write("\t\t\t");
                     //Writer.Write(p.Real);
                     //Writer.Write(" = ");
-                    bool isString = false;
+                    //bool isString = false;
                     bool moreParams = false;
                     switch (p.Type.Real) {
                         case "string":
                         case "chars":
-                            isString = true;
+                            //isString = true;
                             break;
                         case "f32":
                             Writer.Write("(float)atof(");
@@ -608,7 +611,7 @@ namespace Run {
         private void SaveClassesInitializers() {
             foreach (var cls in Builder.Classes.Values) {
                 if (cls.IsEnum) continue;
-                if (cls.IsNative || cls.Access == AccessType.STATIC) {
+                if (cls.IsNative || cls.AccessType == AccessType.STATIC) {
                     continue;
                 }
                 Writer.Write(cls.Real);
@@ -622,7 +625,7 @@ namespace Run {
             Writer.WriteLine();
             foreach (var cls in Builder.Classes.Values) {
                 if (cls.IsEnum) continue;
-                if (cls.IsNative || cls.Access == AccessType.STATIC) {
+                if (cls.IsNative || cls.AccessType == AccessType.STATIC) {
                     continue;
                 }
                 Writer.Write(cls.Real);
@@ -632,12 +635,12 @@ namespace Run {
                 Writer.Write(cls.Real);
                 Writer.WriteLine("* this, Region* __region__) {");
                 if (cls.IsBased) {
-                    Writer.Write(cls.Base.Token.Value);
+                    Writer.Write(cls.BaseType.Token.Value);
                     Writer.WriteLine("_initializer(this, __region__);");
                 }
                 if (cls.Children != null) {
                     for (int i = 0; i < cls.Children.Count; i++) {
-                        if (cls.Children[i] is Var v && v.Access != AccessType.STATIC) {
+                        if (cls.Children[i] is Var v && v.AccessType != AccessType.STATIC) {
                             if (v.Initializer != null) {
                                 Writer.Write("\tthis->");
                                 Writer.Write(v.Real);
@@ -658,7 +661,7 @@ namespace Run {
         void SaveStaticClassMembersValues(Class cls) {
             if (cls.Children == null) return;
             foreach (var child in cls.Children) {
-                if (child is Field f && f.Access == AccessType.STATIC && f.Initializer != null) {
+                if (child is Field f && f.AccessType == AccessType.STATIC && f.Initializer != null) {
                     Writer.Write(f.Real);
                     Writer.Write(" = ");
                     Save(f.Initializer);
@@ -672,7 +675,7 @@ namespace Run {
             if (cls.Children == null) return;
             bool newLine = false;
             foreach (var child in cls.Children) {
-                if (child is Field f && f.Access == AccessType.STATIC) {
+                if (child is Field f && f.AccessType == AccessType.STATIC) {
                     f.Real = cls.Token.Value + f.Real;
                     Save(f, false, false);
                     Writer.WriteLine(";");
@@ -687,7 +690,7 @@ namespace Run {
             foreach (var cls in Builder.Classes.Values.OrderBy(e => e.BaseCount)) {
                 SaveStaticClassMembersPrototypes(cls);
                 if (cls.IsEnum || cls.IsPrimitive) continue;
-                if (cls.IsNative || cls.Access == AccessType.STATIC) {
+                if (cls.IsNative || cls.AccessType == AccessType.STATIC) {
                     continue;
                 }
                 SaveClassDeclaration(cls);
@@ -703,7 +706,7 @@ namespace Run {
             Writer.Write(cls.Real);
             Writer.WriteLine(" {");
             if (cls.IsBased) {
-                Writer.Write(cls.Base.Real);
+                Writer.Write(cls.BaseType.Real);
                 Writer.WriteLine(";");
             }
             if (cls.IsPrimitive) {
@@ -728,7 +731,7 @@ namespace Run {
                             }
                             continue;
                         case Var v:
-                            if (v.Access == AccessType.STATIC) {
+                            if (v.AccessType == AccessType.STATIC || v.Generic != null) {
                                 continue;
                             }
                             Writer.Write("\t");
@@ -744,7 +747,7 @@ namespace Run {
 
             if (cls.Children != null) {
                 foreach (var child in cls.Children) {
-                    if (child is Var v && v.Access == AccessType.STATIC) {
+                    if (child is Var v && v.AccessType == AccessType.STATIC) {
                         v.Real = cls.Real + v.Token.Value;
                         Save(v);
                         Writer.WriteLine(";");
@@ -774,7 +777,7 @@ namespace Run {
             bool ok = false;
             Writer.WriteLine();
             foreach (var cls in Builder.Classes.Values.OrderBy(e => e.BaseCount)) {
-                if (cls.IsNative || cls.Access == AccessType.STATIC) continue;
+                if (cls.IsNative || cls.AccessType == AccessType.STATIC) continue;
                 if (cls.IsEnum) continue;
                 if (cls.Token.Value == "ReflectionType") continue;
                 if (cls.Token.Value == "ReflectionMember") continue;
@@ -804,7 +807,7 @@ namespace Run {
                 Writer.Write("#define ");
                 Writer.Write(enm.Real);
                 Writer.Write(" ");
-                Writer.WriteLine(enm.Base.Real);
+                Writer.WriteLine(enm.BaseType.Real);
                 ok = true;
             }
             if (ok) {
@@ -837,7 +840,10 @@ namespace Run {
         bool SaveFunctionsPrototypes() {
             bool ok = false;
             foreach (Function func in Builder.Functions.Values) {
-                if (func.IsNative || (func is Constructor ctor && (ctor.Type.IsNative || ctor.Type.Access == AccessType.STATIC))) {
+                if (func.IsNative || (func is Constructor ctor && (ctor.Type.IsNative || ctor.Type.AccessType == AccessType.STATIC))) {
+                    continue;
+                }
+                if (func.HasGenerics) {
                     continue;
                 }
                 if (func.Usage == 0) {
@@ -859,7 +865,10 @@ namespace Run {
         }
         void SaveFunctionsImplementations() {
             foreach (Function func in Builder.Functions.Values) {
-                if (func.IsNative || (func is Constructor ctor && (ctor.Type.IsNative || ctor.Type.Access == AccessType.STATIC))) {
+                if (func.IsNative || (func is Constructor ctor && (ctor.Type.IsNative || ctor.Type.AccessType == AccessType.STATIC))) {
+                    continue;
+                }
+                if (func.HasGenerics) {
                     continue;
                 }
                 if (func.Usage == 0) {
@@ -913,9 +922,17 @@ namespace Run {
         }
 
         void Save(EnumMember exp) {
-            Writer.Write(exp.Parent.Token.Value);
-            Writer.Write('_');
+            Writer.Write(exp.Type.Real ?? exp.Type.Token.Value);
+            if (exp.Type != Builder.I32) {
+                Writer.Write('*');
+            }
+            Writer.Write(' ');
+            Writer.Write(exp.Parent.Real ?? exp.Parent.Token.Value);
+            Writer.Write("__");
             Writer.Write(exp.Token.Value);
+            Writer.Write(" = ");
+            Save(exp.Content);
+            Writer.WriteLine(";");
         }
 
         void Save(LiteralExpression exp) {
@@ -1156,7 +1173,7 @@ namespace Run {
             Writer.Write(exp.Real);
             Writer.Write("(");
             bool started = false;
-            if (cls != null && exp.Access == AccessType.INSTANCE) {
+            if (cls != null && exp.AccessType == AccessType.INSTANCE) {
                 Writer.Write(cls.Real);
                 if (cls.IsPrimitive == false) {
                     Writer.Write("*");
@@ -1357,6 +1374,7 @@ namespace Run {
         }
 
         void Save(Var exp, bool saveInitializer = true, bool registerVar = true) {
+            if (exp.IsNative) return;
             if (exp.IsConst) {
                 Writer.Write("const ");
             }
@@ -1720,13 +1738,13 @@ namespace Run {
             if (exp.From != null) {
                 switch (exp.From) {
                     case Field f: {
-                            if (f.Access != AccessType.STATIC && (exp.Parent is not DotExpression || exp.Parent is DotExpression dot && dot.Left == exp)) {
+                            if (f.AccessType != AccessType.STATIC && (exp.Parent is not DotExpression || exp.Parent is DotExpression dot && dot.Left == exp)) {
                                 Writer.Write("this->");
                             }
                         }
                         break;
                     case GetterSetter p: {
-                            if (p.Access != AccessType.STATIC && (exp.Parent is not DotExpression || exp.Parent is DotExpression dot && dot.Left == exp)) {
+                            if (p.AccessType != AccessType.STATIC && (exp.Parent is not DotExpression || exp.Parent is DotExpression dot && dot.Left == exp)) {
                                 Writer.Write(p.Getter.Real);
                                 Writer.Write("(this)");
                                 return;
@@ -1742,11 +1760,6 @@ namespace Run {
 
         void Save(IsExpression exp) {
             switch (exp.Left) {
-                case LiteralExpression:
-                    Writer.Write(exp.Left.Type.ID);
-                    Writer.Write(" == ");
-                    Writer.Write(exp.Right.Type.ID);
-                    break;
                 case IdentifierExpression:
                     Writer.Write("IS(");
                     if (exp.Left.Type.IsPrimitive) {
@@ -1756,6 +1769,11 @@ namespace Run {
                     Writer.Write(", ");
                     Writer.Write(exp.Right.Type.ID);
                     Writer.Write(")");
+                    break;
+                default:
+                    Writer.Write(exp.Left.Type.ID);
+                    Writer.Write(" == ");
+                    Writer.Write(exp.Right.Type.ID);
                     break;
             }
         }
@@ -1817,13 +1835,18 @@ namespace Run {
                 SaveNative(exp);
                 return;
             }
+            bool hasParameters = false;
             Writer.Write(exp.Function?.Real ?? exp.Real ?? exp.Token.Value);
             Writer.Write('(');
-            if (exp.Caller != null && exp.Function.Access != AccessType.STATIC) {
+            if (exp.Caller != null && exp.Function.AccessType != AccessType.STATIC) {
                 Save(exp.Caller);
-                if (exp.Arguments.Count > 0) Writer.Write(", ");
+                hasParameters = true;
+                if (exp.Arguments.Count > 0) {
+                    Writer.Write(", ");
+                }
             }
             for (int i = 0; i < exp.Arguments.Count; i++) {
+                hasParameters = true;
                 if (exp.Function.HasVariadic && i == exp.Function.Parameters.Children.Count - 1) {
                     Writer.Write(exp.Arguments.Count - exp.Function.Parameters.Children.Count + 1);
                     Writer.Write(", ");
@@ -1831,9 +1854,13 @@ namespace Run {
                 Save(exp.Arguments[i]);
                 if (i < exp.Arguments.Count - 1) {
                     Writer.Write(", ");
+                    hasParameters = true;
                 }
             }
-            Writer.Write(",__current_region__)");
+            if (hasParameters) {
+                Writer.Write(", ");
+            }
+            Writer.Write("__current_region__)");
         }
 
         void Save(Default exp) {

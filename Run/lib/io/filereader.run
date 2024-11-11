@@ -15,8 +15,8 @@ type FileReader: FileBase {
 	var mode:FileReaderMode
 
 	this(.path,.mode) {
-		fp = fopen(path,mode as string)
-		opened = true
+		fp = fopen(path,mode as chars)
+		opened = fp != null
 		ended = 0
 	}
 		
@@ -42,11 +42,15 @@ type FileReader: FileBase {
 
 	function readI32():i32 => readInternal(4) as i32
 
+	function readU32():u32 => readInternal(4) as u32
+
 	function readI64():i64 => readInternal(8) as i64
 
 	function readI16():i16 => readInternal(2) as i16
 
 	function readI8():i8 => readInternal(1) as i8
+
+	function readU8():u8 => readInternal(1) as u8
 
 	function readString(length:i32):string => readInternal(length) as string
 
@@ -55,6 +59,14 @@ type FileReader: FileBase {
 	function readf64():f64 => readInternal(8) as f64
 
 	function read(length:i32):byte[] => readInternal(length) as byte[]
+
+	function read(bytes:byte[], size:i32) {
+		if ok == false => return
+		resize(size)
+		if ended == 2 => return
+		defer readed+=size
+		copy(bytes as pointer, (buffer + readed) as pointer, size)
+	}
 
 	function readInternal(length:i32): pointer {
 		if ok == false => return null

@@ -11,13 +11,13 @@ namespace Run {
                 ctor.Parse();
                 return;
             }
-            if (parent.FindParent<Function>() is Function func && func.Access == AccessType.STATIC) {
+            if (parent.FindParent<Function>() is Function func && func.AccessType == AccessType.STATIC) {
                 parent.Program.AddError(Error.InvalidAccessFunctionStatic);
                 return;
             }
             parent.Scanner.RollBack();
             //parent.Add<Expression>().Parse();
-            parent.Add(ExpressionHelper.Expression(parent));
+            parent.Add(ExpressionHelper.Parse(parent));
         }
 
         internal static void ParseDefer(Block parent) {
@@ -81,10 +81,6 @@ namespace Run {
 
         internal static bool Parse(Token token, Block parent) {
             switch (token.Value) {
-                case "internal":
-                case "protected":
-                case "public":
-                case "private": CheckModifier(token, parent); break;
                 case "if": CheckAndParse<If>(parent, () => parent.FindParent<Function>() != null); break;
                 case "for": CheckAndParse<For>(parent, () => parent.FindParent<Function>() != null); break;
                 case "var": ParseVar(parent); break;
@@ -99,21 +95,38 @@ namespace Run {
                 case "label": CheckAndParse<Label>(parent, () => parent.FindParent<Function>() != null); break;
                 case "using": CheckAndParse<Using>(parent, () => parent is Module); break;
                 case "delete": CheckAndParse<Delete>(parent, () => parent.FindParent<Function>() != null); break;
+                case "public": AST.CurrentAccessModifier = AccessModifier.PUBLIC; break;
                 case "return": CheckAndParse<Return>(parent, () => parent.FindParent<Function>() != null); break;
-                case "static": AST.CurrentAccess = AccessType.STATIC; break;
+                case "static": AST.CurrentAccessType = AccessType.STATIC; break;
                 case "switch": CheckAndParse<Switch>(parent, () => parent.FindParent<Function>() != null); break;
                 case "indexer": CheckAndParse<Indexer>(parent, () => parent is Class); break;
                 case "library": CheckAndParse<Library>(parent, () => parent is Module); break;
+                case "private": AST.CurrentAccessModifier = AccessModifier.PRIVATE; break;
+                case "virtual": AST.CurrentMemberModifier = MemberModifier.VIRTUAL; break;
+                case "default": ParseDefault(parent); break;
                 case "continue": CheckAndParse<Continue>(parent, () => parent.FindParent<For>() != null); break;
                 case "function": ParseFunction(parent); break;
+                case "internal": AST.CurrentAccessModifier = AccessModifier.INTERNAL; break;
                 case "operator": CheckAndParse<Operator>(parent, () => parent is Class cls && cls.IsNumber == false); break;
+                case "override": AST.CurrentMemberModifier = MemberModifier.OVERRIDE; break;
                 case "property": CheckAndParse<Property>(parent, () => parent is Class || parent is Extension); break;
                 case "extension": CheckAndParse<Extension>(parent, () => parent is Module); break;
                 case "interface": CheckAndParse<Interface>(parent, () => parent is Module); break;
                 case "namespace": CheckAndParse<Namespace>(parent, () => parent.Scanner.Line == 1); break;
+                case "protected": AST.CurrentAccessModifier = AccessModifier.PROTECTED; break;
                 default: return false;
             }
             return true;
+        }
+
+        private static void ParseDefault(Block parent) {
+            if (parent is not Class cls) {
+                parent.Program.AddError(parent.Scanner.Current, Error.OnlyInModuleScope);
+                return;
+            }
+            cls.Default = new DefaultValue();
+            cls.Default.SetParent(cls);
+            cls.Default.Parse();
         }
 
         internal static void ParseEnum(Block parent) {
@@ -132,19 +145,6 @@ namespace Run {
             var function = parent.Add<Function>();
             if (parent is Extension) function.IsExtension = true;
             function.Parse();
-        }
-
-        internal static void CheckModifier(Token token, Block parent) {
-            if (parent is not Class && parent is not Module) {
-                parent.Program.AddError(token, Error.OnlyInClassOrModuleScope);
-                return;
-            }
-            switch (token.Value) {
-                case "public": AST.CurrentModifier = AccessModifier.PUBLIC; break;
-                case "internal": AST.CurrentModifier = AccessModifier.INTERNAL; break;
-                case "protected": AST.CurrentModifier = AccessModifier.PROTECTED; break;
-                case "private": AST.CurrentModifier = AccessModifier.PRIVATE; break;
-            }
         }
     }
 }

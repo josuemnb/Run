@@ -1,0 +1,87 @@
+using "io/file"
+
+type Layer {
+	var inputSize:i32
+	var outputSize:i32
+	var weights:f32[]
+	var biases:f32[]
+	var weightsMomentum:f32[]
+	var biasesMomentum:f32[]
+
+	this() {}
+
+	this(inputSize:i32, outputSize:i32) {
+		var n = inputSize * outputSize
+		var scale = Math.sqrt(2.0 / inputSize)
+		this.inputSize = inputSize
+		this.outputSize = outputSize
+		this.weights = new f32[n]
+		this.biases = new f32[outputSize]
+		this.weightsMomentum = new f32[n]
+		this.biasesMomentum = new f32[outputSize]
+
+		for i in 0..n {
+			this.weights[i] = (Random.next() - 0.5) * 2 * scale
+		}
+	}
+}
+
+type Network {
+	var hidden : Layer
+	var output : Layer
+
+	this(inputSize:i32, hiddenSize:i32, outputSize:i32) {
+		hidden = new Layer(inputSize, hiddenSize)
+		output = new Layer(hiddenSize, outputSize)
+	}
+}
+
+type InputData {
+	var images : byte[]
+	var labels : byte[]
+	var total: i32
+
+	function shuffle(size:i32) {
+		var temp:u8
+		for i in 0..total {
+			var j = Random.next() % (i + 1) as i32
+			for k in 0..size {
+				temp = images[i*size+k]
+				images[i*size+k] = images[j*size+k]
+				images[j*size+k] = temp
+			}
+			temp = labels[i]
+			labels[i] = labels[j]
+			labels[j] = temp
+		}
+	}
+
+	function readImages(file:chars, size:i32)  {
+		var f = new FileReader(file,FileReaderMode.READ)
+		f.readI32()
+		var count = f.readI32().reverse()
+		f.readI32()
+		f.readI32()
+		images = new byte[total * size * size]
+		f.read(images, total * size * size)
+		f.close()
+	}
+
+	function readLabels(file:chars) {
+		var f = new FileReader(file,FileReaderMode.READ)
+		f.readI32()
+		total = f.readI32().reverse()
+		labels = new byte[total]
+		f.read(labels, total)
+		f.close()
+	}
+}
+
+main {
+	var net = new Network(784,256,10)
+	var data = new InputData()	
+	data.readImages("data/train-images-idx3-ubyte", 28)
+	data.readLabels("data/train-labels-idx1-ubyte")
+	data.shuffle(784)
+}
+

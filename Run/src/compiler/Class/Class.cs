@@ -1,10 +1,14 @@
 ﻿using System.Collections.Generic;
+using System.Linq;
 
 namespace Run {
     public class Generic : AST {
         public Token Constraint;
         public override void Parse() {
             if (GetName(out Token) == false) return;
+            if (Scanner.Expect('<')) {
+                ParseGenerics();
+            }
             if (Scanner.Expect(':')) {
                 if (GetName(out Constraint) == false) return;
             }
@@ -48,6 +52,16 @@ namespace Run {
             };
         }
     }
+
+    public class DefaultValue : Var {
+        public override void Parse() {
+            if (Scanner.Expect('=') == false) {
+                Program.AddError(Scanner.Current, Error.ExpectingInitializer);
+                return;
+            }
+            ParseInitializer();
+        }
+    };
     public class Class : Block {
         public static int CounterID = 0;
         public int ID = -1;
@@ -58,6 +72,7 @@ namespace Run {
         public bool HasOperators;
         public bool HasIndexers;
         public List<Interface> Interfaces;
+        public DefaultValue Default;
         public string NativeName;
         public bool HasInterfaces => Interfaces != null && Interfaces.Count > 0;
 
@@ -66,9 +81,18 @@ namespace Run {
         public Function toString;
         public bool IsBased => BaseToken != null;
         public bool IsNumber;
-        public Class Base;
+        public Class BaseType;
         public AST BaseToken;
-        public int BaseCount => Base != null ? Base.BaseCount + 1 : 0;
+        public int BaseCount => BaseType != null ? BaseType.BaseCount + 1 : 0;
+
+        public override bool HasGenerics => base.HasGenerics || (BaseType != null && BaseType.HasGenerics);
+
+
+        public Class Clone() {
+            var cls = (Class)MemberwiseClone();
+            cls.ID = CounterID++;
+            return cls;
+        }
 
         public override void Parse() {
             SetAccess();
@@ -89,7 +113,7 @@ namespace Run {
                     if (Interfaces[i] == cls) return true;
                 }
             }
-            return Base?.IsCompatible(cls) ?? false;
+            return BaseType?.IsCompatible(cls) ?? false;
         }
 
         public override void GetAnnotations() {
@@ -108,8 +132,8 @@ namespace Run {
             foreach (var v in Children) {
                 if (v is T t && (t.Token.Value == name || t.Real == name || t.Real == temp)) yield return t;
             }
-            if (Base != null) {
-                foreach (var v in Base.FindMembers<T>(name)) {
+            if (BaseType != null) {
+                foreach (var v in BaseType.FindMembers<T>(name)) {
                     yield return v;
                 }
             }
@@ -123,7 +147,7 @@ namespace Run {
                 }
                 if (v is Indexer index && index.Index.Token.Value == name && index.Index is T t1) return t1;
             }
-            return Base?.FindMember<T>(name);
+            return BaseType?.FindMember<T>(name);
         }
 
         private void ParseNames() {
@@ -133,16 +157,10 @@ namespace Run {
             } else {
                 Real = "_" + Token.Value;
             }
-            //if (Annotations != null) {
-            //    if (Annotations.Find(a => a.Token.Value == "native") is Annotation a) {
-            //        Real = a.Value;
-            //        return;
-            //    }
-            //}
-            //if (Scanner.Expect('<')) {
-            //    Generics = ParseGenerics(this);
-            //    Real += "_" + string.Join("_", Generics.Select(g => g.Token.Value));
-            //}
+            if (Scanner.Expect('<')) {
+                ParseGenerics();
+                //Real += "_" + string.Join("_", Generics.Select(g => g.Token.Value));
+            }
             if (Scanner.Expect(':')) {
                 ParseBased();
                 ParseInterfaces();
@@ -169,14 +187,17 @@ namespace Run {
             BaseToken = new AST();
             BaseToken.SetParent(this);
             if (GetName(out BaseToken.Token) == false) return;
-            //if (Scanner.Expect('<')) {
-            //    Based.Generics = ParseGenerics(Based);
-            //}
+            if (Scanner.Expect('<')) {
+                BaseType = new Class();
+                BaseType.SetParent(this);
+                BaseType.Token = BaseToken.Token;
+                BaseType.ParseGenerics();
+            }
         }
 
         public override AST Find(string token) {
             if (base.Find(token) is AST a) return a;
-            return Base?.Find(token);
+            return BaseType?.Find(token);
         }
 
         public override void Print() {
@@ -188,7 +209,7 @@ namespace Run {
             //    foreach (var generic in Generics)
             //        generic.Print();
             //}
-            AST.Print(Base);
+            AST.Print(BaseType);
             foreach (var child in Children) {
                 child.Print();
             }

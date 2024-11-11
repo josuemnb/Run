@@ -15,8 +15,7 @@ namespace Run {
                     Add<Return>().Parse();
                     return;
                 }
-                //Add<Expression>().Parse();
-                Add(ExpressionHelper.Expression(this));
+                Add(ExpressionHelper.Parse(this));
                 return;
             }
             if (Scanner.Current.Type != TokenType.OPEN_BLOCK) {
@@ -38,7 +37,7 @@ namespace Run {
                 }
             }
         again:
-            Expressions.Add(ExpressionHelper.Expression(this));
+            Expressions.Add(ExpressionHelper.Parse(this));
             Scanner.Scan();
             if (Scanner.Current.Type == TokenType.COMMA) {
                 goto again;
@@ -52,7 +51,7 @@ namespace Run {
         public Class Type;
         public bool SameType = true;
         public override void Parse() {
-            Expression = ExpressionHelper.Expression(this);
+            Expression = ExpressionHelper.Parse(this);
             if (Expression == null) {
                 Program.AddError(Scanner.Current, Error.InvalidExpression);
                 return;

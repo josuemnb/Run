@@ -1,34 +1,42 @@
-type class: object {
-	var name: string
+@header(memory.h)
+@native(realloc($p, $s))
+function realloc(p:any,s:i32):any
 
-	function hashCode(): i32 => this as i32
+@number
+@primitive
+@native(int)
+type i32 { default = 0 }
 
-	function ok() { 
-		print("ok")
+type List<T> {
+	var items: T[]
+	var count: i32
+	var capacity: i32 = 4
+
+	function add(item: T) {
+		resize()
+		items[count] = item
+		count++
 	}
-	function toString(): string => name
+
+	function resize {
+		if count < capacity => return
+
+		capacity *= 2
+		this.items = realloc(items as any, capacity * sizeof(T)) as T[]
+	}
 }
 
-extension class {
-	function done {
-		print("done")
-	}
+type ListI32 : List<i32> { }
 
-	property prop: string {
-		get {
-			return name
-		}
-		set {
-			name = value
-			print(name)
-		}
-	}
+type Map<K, V> {
+	var keys: K[]
+	var values: V[]
+	var count: i32 
+	var capacity: i32
 }
 
 main {
-	var ex = new class()
-	var num = 10
-	ex.name = "John " + "Doe"
-	print(ex.name)
-	ex.done()
+	var list = new ListI32()
+	//var list_list = new List<List<i32>>()
+	//var map = new Map<i32, i32>()
 }

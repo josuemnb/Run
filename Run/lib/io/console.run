@@ -18,6 +18,15 @@ static type Console {
 		fwrite("\n" as pointer, 1, 1, getIO(1))
 	}
 
+	static function writeLine(value:chars) {
+		fwrite(value as pointer, value.size(), 1, getIO(1))
+		fwrite("\n" as pointer, 1, 1, getIO(1))
+	}
+
+	static function write(value:chars) {
+		fwrite(value as pointer, value.size(), 1, getIO(1))
+	}
+
 	static function write(value:string) => fwrite(value as pointer, value.size, 1, getIO(1))
 
 	static function write(value:i32) => write(value.toString())

@@ -1,34 +1,45 @@
 // VERY IMPORTANT
 // DO NOT CHANGE THIS FILE
 
-@native(LARGE_INTEGER)
-@header(windows.h)
-type LARGE_INTEGER {
-	var QuadPart: i64
-}
-
-@native(QueryPerformanceCounter($out))
-@header(windows.h)
-function QueryPerformanceCounter(out:LARGE_INTEGER): i32
+//@native(LARGE_INTEGER)
+//@header(windows.h)
+//type LARGE_INTEGER {
+//	var QuadPart: i64
+//}
+//
+//@native(QueryPerformanceCounter($out))
+//@header(windows.h)
+//function QueryPerformanceCounter(out:LARGE_INTEGER): i32
 
 @native(srand($seed))
 @header(stdlib.h)
 function srand(seed: i32)
 
+@native(time(NULL):i32)
+@header(time.h)
+function time(): i32
+
 @native(rand())
 @header(stdlib.h)
 function rand(): i32
 
+@native(RAND_MAX)
+@header(stdlib.h)
+var RAND_MAX: i32
+
 type Random {
 	this {
-		var ticks = scope LARGE_INTEGER
-		QueryPerformanceCounter(ticks)
-		srand(ticks.QuadPart as i32)
+		srand(time())
+		//var ticks = new LARGE_INTEGER()
+		//QueryPerformanceCounter(ticks)
+		//srand(ticks.QuadPart as i32)
 	}
 
-	function next(min:i32, max:i32):i32 => rand() % (max - min) + min;
+	static function next:f32 => rand() as f32 / RAND_MAX as f32
 
-	function next(seed:i32):i32 => next(0, seed)
+	static function next(min:i32, max:i32):i32 => rand() % (max - min) + min
+
+	static function next(seed:i32):i32 => next(0, seed)
 }
 
 static type Math {

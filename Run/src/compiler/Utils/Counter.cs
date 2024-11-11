@@ -118,7 +118,7 @@
             foreach (var v in c.Children) {
                 Count(v as Var);
             }
-            if (c.Base is Class b) {
+            if (c.BaseType is Class b) {
                 Count(b);
             }
         }
@@ -132,7 +132,7 @@
             Count(f.Type);
             Count(f as Block);
             if (f.Token.Value == "this") {
-                if (f.Parent is Class cls && cls.Base is Class b) {
+                if (f.Parent is Class cls && cls.BaseType is Class b) {
                     for (int i = 0; i < b.Children.Count; i++) {
                         if (b.Children[i] is Constructor ct && (ct.Parameters?.Children.Count ?? 0) == (f.Parameters?.Children.Count ?? 0)) {
                             if ((ct.Parameters?.Children.Count ?? 0) == 0) {

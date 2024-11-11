@@ -12,25 +12,24 @@ namespace Run {
         }
         void ValidateInterfaces() {
             foreach (var cls in Builder.Classes.Values) {
-                if (cls.HasInterfaces) {
-                    for (int i = 0; i < cls.Interfaces.Count; i++) {
-                        var inter = cls.Interfaces[i];
-                        for (int j = 0; j < inter.Children.Count; j++) {
-                            var child = inter.Children[j];
-                            switch (child) {
-                                case Function func:
-                                    var buff = new StringBuilder(cls.Token.Value).Append('_').Append(func.Token.Value);
-                                    Builder.SetRealName(func, buff);
-                                    if (cls.FindMember<Function>(buff.ToString()) == null) {
-                                        Builder.Program.AddError(func.Token, Error.InterfaceMemberNotFound + " at: " + cls.Token.Value);
-                                    }
-                                    break;
-                                case Property prop:
-                                    if (cls.FindMember<Property>(prop.Token.Value) == null) {
-                                        Builder.Program.AddError(prop.Token, Error.InterfaceMemberNotFound + " at: " + cls.Token.Value);
-                                    }
-                                    break;
-                            }
+                if (cls.HasInterfaces == false) return;
+                for (int i = 0; i < cls.Interfaces.Count; i++) {
+                    var inter = cls.Interfaces[i];
+                    for (int j = 0; j < inter.Children.Count; j++) {
+                        var child = inter.Children[j];
+                        switch (child) {
+                            case Function func:
+                                var buff = new StringBuilder(cls.Token.Value).Append('_').Append(func.Token.Value);
+                                Builder.SetRealName(func, buff);
+                                if (cls.FindMember<Function>(buff.ToString()) == null) {
+                                    Builder.Program.AddError(func.Token, Error.InterfaceMemberNotFound + " at: " + cls.Token.Value);
+                                }
+                                break;
+                            case Property prop:
+                                if (cls.FindMember<Property>(prop.Token.Value) == null) {
+                                    Builder.Program.AddError(prop.Token, Error.InterfaceMemberNotFound + " at: " + cls.Token.Value);
+                                }
+                                break;
                         }
                     }
                 }
@@ -121,7 +120,7 @@ namespace Run {
                 }
             }
             if (AreCompatible(bin.Left, bin.Right) == false) {
-                Builder.Program.AddError(bin.Right.Token ?? bin.Left.Token ?? bin.Token, Error.IncompatibleType);
+                Builder.Program.AddError(bin.Token ?? bin.Right.Token ?? bin.Left.Token, Error.IncompatibleType);
                 return;
             }
             switch (bin.Token.Family) {
@@ -159,11 +158,11 @@ namespace Run {
             (f.Start as Var).Initializer = range.Left;
             f.Condition = new BinaryExpression(f) {
                 Token = new Token { Type = TokenType.LOWER, Value = "<" },
-                Left = new IdentifierExpression(f) { Token = it.Var.Token },
+                Left = new IdentifierExpression(f) { Token = it.Var.Token, Real = it.Var.Real },
                 Right = range.Right,
                 Validated = true
             };
-            f.Step = new UnaryExpression(f, new IdentifierExpression(f) { Token = it.Var.Token }, true) {
+            f.Step = new UnaryExpression(f, new IdentifierExpression(f) { Token = it.Var.Token, Real = it.Var.Real }, true) {
                 Type = range.Type,
                 Validated = true,
                 Token = new Token("++") {
@@ -229,7 +228,9 @@ namespace Run {
         }
         void Validate(Function func) {
             if (func.Validated) return;
-
+            if (func.HasGenerics) {
+                return;
+            }
             Validate(func as Block);
             Validate(func.Type);
         }
@@ -262,7 +263,7 @@ namespace Run {
             if (b.Owner == null) {
                 return;
             }
-            b.Type = b.Owner.Base;
+            b.Type = b.Owner.BaseType;
             Validate(b.Type);
             AddErrorIfNull(b);
         }
@@ -344,7 +345,7 @@ namespace Run {
                     @enum.IsPrimitive = true;
                 }
                 if (found == null) continue;
-                if (found.IsNumber == false && found != Builder.String) {
+                if (found.IsNumber == false && found != Builder.CharSequence) {
                     Builder.Program.AddError(@enum.Token, Error.IncompatibleType);
                     continue;
                 }
@@ -355,9 +356,9 @@ namespace Run {
                 }
             }
             Validate(cls);
-            @enum.Base = cls;
+            @enum.BaseType = cls;
             foreach (EnumMember child in @enum.Children) {
-                child.Type = @enum.Base;
+                child.Type = @enum.BaseType;
             }
             @enum.Validated = cls != null;
         }
@@ -422,18 +423,19 @@ namespace Run {
         }
         void Validate(Class cls) {
             if (cls == null /*|| cls.HasGenerics*/) return;
-            if (cls.IsEnum) return;
             if (cls.Validated) return;
-            //if (cls.IsNative == false) {
+            if (cls.IsEnum) return;
+            if (cls.HasGenerics) {
+                //var generic = Replacer.ValidateGenerics(cls, Builder);
+            }
             Builder.SetRealName(cls);
-            //}
             if (cls.BaseToken != null) {
                 if (Builder.Classes.TryGetValue(cls.BaseToken.Token.Value, out Class based) == false) {
                     Builder.Program.AddError(cls.BaseToken.Token, Error.UnknownType);
                     return;
                 }
-                cls.Base = based;
-                Validate(cls.Base);
+                cls.BaseType = based;
+                Validate(cls.BaseType);
             }
             Validate(cls as Block);
         }
@@ -462,8 +464,16 @@ namespace Run {
                         var.Type = v.Type;
                     }
                 } else if (var is not Parameter && c.Children.Exists(c => c != var && c.Token.Value == var.Token.Value)) {
-                    if (func != null && func.Access == AccessType.INSTANCE) {
+                    if (func != null && func.AccessType == AccessType.INSTANCE) {
                         var.Program.AddError(var.Token, Error.NameAlreadyExists);
+                        return;
+                    }
+                } else if (c.HasGenerics) {
+                    if (c.Generics.Find(g => g.Token.Value == var.Type.Token.Value) is Generic gen) {
+                        var.Generic = gen;
+                        if (func != null) {
+                            func.HasGeneric = true;
+                        }
                         return;
                     }
                 }
@@ -472,7 +482,7 @@ namespace Run {
                 Builder.Program.AddError(var.Token, Error.UndefinedType);
                 return;
             }
-            if (Builder.Find(var.Type.Token.Value/*, out AST from*/) is Class cls) {
+            if (Builder.Find(var.Type.Token.Value) is Class cls) {
                 var.Type = cls;
                 Validate(cls);
                 return;
@@ -483,7 +493,7 @@ namespace Run {
 
         private void ValidateImplicit(Var var) {
             if (var.Initializer is not LiteralExpression) return;
-            if (var.Initializer.Type.IsNative == false) {
+            if (var.Initializer.Type == null || var.Initializer.Type.IsNative == false) {
                 Builder.Program.AddError(var.Token, "Implicit Annotation only works with native types");
                 return;
             }
@@ -520,6 +530,9 @@ namespace Run {
             switch (literal.Token.Type) {
                 case TokenType.REAL:
                     literal.Type = Builder.F64;
+                    break;
+                case TokenType.HEX:
+                    literal.Type = Builder.I32;
                     break;
                 case TokenType.NUMBER:
                     literal.Type = Builder.I32;
@@ -578,10 +591,16 @@ namespace Run {
                 Validate(id.Type);
                 return;
             }
+            //if (left.IsNative) {
+            //    id.Real = id.Token.Value;
+            //}
             if (id.Parent is DotExpression dot) {
                 var dotType = dot.Type;
                 if (dot.Left == id && dot.Parent is DotExpression dp) {
                     dotType = dp.Left.Type;
+                }
+                if (dot.Left is IdentifierExpression li && li.Type != null && li.Type.IsNative) {
+                    //id.Real = id.Token.Value;
                 }
                 if (dotType != null) {
                     if (ValidateEnum(id, dot.Left.Token.Value)) {
@@ -628,7 +647,7 @@ namespace Run {
                 dot.Program.AddError(dot.Right.Token, Error.InvalidExpression);
                 return;
             }
-            if (dot.Right is IdentifierExpression id && id.From != null && id.From.Access == AccessType.STATIC) {
+            if (dot.Right is IdentifierExpression id && id.From != null && id.From.AccessType == AccessType.STATIC) {
                 if (Replacer.Self(dot, dot.Right)) {
                     return;
                 }
@@ -711,7 +730,7 @@ namespace Run {
                 return func;
             }
             if (cls.IsBased) {
-                return FindInClass(initial, cls.Base);
+                return FindInClass(initial, cls.BaseType);
             }
             return null;
         }
@@ -724,6 +743,7 @@ namespace Run {
                 Builder.Program.AddError(ctor.Token, Error.UnknownType);
                 return;
             }
+            if (ctor.Token.Value == "FileReader") ;
             var real = GetRealName(ctor);
             var func = GetFunction(real);
             if (func == null) {
@@ -758,7 +778,7 @@ namespace Run {
                 }
             }
             if (cls.IsBased) {
-                return FindInClass(call, cls.Base);
+                return FindInClass(call, cls.BaseType);
             }
             return null;
         }
@@ -873,15 +893,22 @@ namespace Run {
         void Validate(NewExpression n) {
             if (n.Validated) return;
             n.Validated = true;
-            if (Builder.Classes.TryGetValue(n.QualifiedName, out Class cls) == false) {
-                Builder.Program.AddError(n.Token, Error.UnknownType);
+            if (n.HasGenerics) {
+                Replacer.Generics(n, Builder);
+            } else if (n.Generic != null) {
+                //Replacer.Generic(n, Builder);
                 return;
+            } else {
+                if (Builder.Classes.TryGetValue(n.QualifiedName, out Class cls) == false) {
+                    Builder.Program.AddError(n.Token, Error.UnknownType);
+                    return;
+                }
+                n.Type = cls;
             }
-            n.Type = cls;
             Validate(n.Type);
             if (n.Content is ArrayCreationExpression ind) {
                 Validate(ind);
-                ind.Type = cls;
+                ind.Type = n.Type;
             } else if (n.Content is ConstructorExpression call) {
                 Validate(call);
             }

@@ -18,7 +18,7 @@ namespace Run {
         public int LinesParsed { get; internal set; }
 
         Stopwatch Watch = new();
-        internal List<string> searchDirectories = [];
+        internal List<string> SearchDirectories = [];
         public HashSet<string> Libraries = [];
         public Dictionary<string, AST> Implicits = [];
         public Dictionary<string, Module> Usings = [];
