@@ -4,6 +4,18 @@
 using filebase
 using iwriter
 
+@native(fopen($path,$mode))
+@header(stdio.h)
+function fopen(path:chars,mode:FileWriterMode):FILE
+
+@native(fwrite($buffer,$size,$count,$fp):i32)
+@header(stdio.h)
+function fwrite(buffer:pointer,size:i32,count:i32,fp:FILE):i32
+
+@native(fwrite($buffer,$size,$count,$fp):i32)
+@header(stdio.h)
+function fwrite(buffer:i8[],size:i32,count:i32,fp:FILE):i32
+
 enum FileWriterMode {
 	WRITE = "w"
 	WRITE_BINARY = "wb"
@@ -15,7 +27,10 @@ type FileWriter: FileBase, IWriter {
 	var mode:FileWriterMode
 
 	this(.path,.mode) {
-		fp = fopen(path,mode as chars)
+		fp = fopen(path,mode)
+		if fp == null {
+			panic("FileWriter: Failed to open file")
+		}
 		opened = true
 		ended = 0
 	}

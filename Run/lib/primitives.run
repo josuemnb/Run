@@ -38,15 +38,14 @@ type i32 {
 	static var min:i32 = -2147483648
 
 	function reverse:i32 {
-		var r = 0
-		var n = this
-		for i in 0..4 {
-			r = r << 8
-			r = r | (n & 0xFF)
-			n = n >> 8
-		}
-		return r
-	
+		var array = (ref this)
+		var n1 = array[0]
+		array[0] = array[3]
+		array[3] = n1
+		var n2 = array[1]
+		array[1] = array[2]
+		array[2] = n2
+		return array as i32
 	}
 }
 

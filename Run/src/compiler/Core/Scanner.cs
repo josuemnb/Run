@@ -413,7 +413,7 @@ namespace Run {
         }
 
         void GetReal(Token tok) {
-            tok.Type = TokenType.REAL;
+            tok.Type = TokenType.DOUBLE;
             while (Valid && (char.IsDigit(Data[Position]) || Data[Position] == '_')) {
                 Position++;
             }
@@ -452,11 +452,18 @@ namespace Run {
             while (Valid && (char.IsDigit(Data[Position]) || Data[Position] == '_')) {
                 Position++;
             }
+            if(Valid && (Data[Position]=='e' || Data[Position]=='E')) {
+                GetReal(tok);
+            } 
             if (Valid && Data[Position] == '.') {
                 if (Data.Length > Position + 1 && char.IsDigit(Data[Position + 1])) {
                     Position++;
                     GetReal(tok);
                 }
+            }
+            if (Valid && (Data[Position] == 'f' || Data[Position] == 'F')) {
+                tok.Type = TokenType.FLOAT;
+                Position++;
             }
             tok.Value = (positive ? "" : "-") + Data[start..Position].Replace("_", "");
         }

@@ -5,8 +5,14 @@
 @native(memcpy($dest, $src, $size))
 function copy(dest:pointer, src:pointer, size:i32)
 
-@native(memcpy($dest,$src + $sOffset, $size))
+@native(memcpy($dest, $src, $size))
+function copy(dest:byte[], src:byte[], size:i32)
+
+@native(memcpy($dest, $src + $sOffset, $size))
 function copy(dest:pointer, src:pointer, size:i32, sOffset:i32)
+
+@native(memcpy($dest, $src + $sOffset, $size))
+function copy(dest:byte[], src:byte[], size:i32, sOffset:i32)
 
 @native(memcpy($dest + $dOffset,$src + $sOffset, $size))
 function copy(dest:pointer, src:pointer, size:i32, sOffset:i32, dOffset:i32)
@@ -21,5 +27,16 @@ function realloc(p:pointer,s:i32):pointer
 
 @native(free($p))
 function free(p:pointer):i32
+
+@native(abort())
+@header(stdio.h)
+function abort()
+
+function panic(msg:chars) {
+	print("PANIC: ")
+	print(msg)
+	print("\n")
+	abort()
+}
 
 using object

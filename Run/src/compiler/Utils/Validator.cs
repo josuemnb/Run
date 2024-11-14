@@ -67,6 +67,7 @@ namespace Run {
                 case Class cls: Validate(cls); break;
                 case Delete del: Validate(del); break;
                 case Extension ex: break;
+                case Defer df: Validate(df); break;
                 case Block b: Validate(b); break;
                 case Return ret: Validate(ret); break;
                 case TypeOf tp: Validate(tp); break;
@@ -95,6 +96,16 @@ namespace Run {
                 case TypeExpression t: Validate(t); break;
                 case ContentExpression exp: ValidateExpression(exp); break;
             }
+        }
+
+        void Validate(Defer defer) {
+            if (defer.Validated) return;
+            defer.Validated = true;
+            if (defer.Expression != null) {
+                Validate(defer.Expression);
+                return;
+            }
+            Validate(defer as Block);
         }
 
         //void Validate(Extension ex) {
@@ -528,8 +539,11 @@ namespace Run {
             if (literal.Validated) return;
             literal.Validated = true;
             switch (literal.Token.Type) {
-                case TokenType.REAL:
+                case TokenType.DOUBLE:
                     literal.Type = Builder.F64;
+                    break;
+                case TokenType.FLOAT:
+                    literal.Type = Builder.F32;
                     break;
                 case TokenType.HEX:
                     literal.Type = Builder.I32;
@@ -743,7 +757,6 @@ namespace Run {
                 Builder.Program.AddError(ctor.Token, Error.UnknownType);
                 return;
             }
-            if (ctor.Token.Value == "FileReader") ;
             var real = GetRealName(ctor);
             var func = GetFunction(real);
             if (func == null) {

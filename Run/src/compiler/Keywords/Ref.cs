@@ -15,4 +15,19 @@ namespace Run {
             }
         }
     }
+    public class ValueOf : ContentExpression {
+
+        public ValueOf(AST parent) {
+            SetParent(parent);
+            Parse();
+        }
+        public override void Parse() {
+            var parenteses = Scanner.Expect('(');
+            base.Parse();
+            if (parenteses && Scanner.Expect(')') == false) {
+                Program.AddError(Token, Error.ExpectingCloseParenteses);
+            }
+        }
+    }
+
 }

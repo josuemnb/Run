@@ -45,7 +45,7 @@ namespace Run {
                     Token = Token,
                 };
             } else {
-                Debugger.Break();
+                //Debugger.Break();
             }
         }
     }

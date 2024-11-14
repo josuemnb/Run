@@ -13,7 +13,6 @@ namespace Run {
             if (string.IsNullOrEmpty(path)) {
                 throw new Exception("Path can't be null or empty");
             }
-
             Destination = path + ".c";
             using var stream = new FileStream(Destination, FileMode.Create);
             Save(stream);
@@ -443,7 +442,14 @@ namespace Run {
                     case Var v:
                         Writer.Write("\t");
                         Writer.Write(v.Real);
-                        Save(v.Initializer);
+                        Writer.Write(" = ");
+                        if (v.Initializer != null) {
+                            Save(v.Initializer);
+                        } else if (v.Type.IsPrimitive) {
+                            Writer.Write('0');
+                        } else {
+                            Writer.Write(v.Type.Default);
+                        }
                         Writer.WriteLine(';');
                         break;
                 }
@@ -664,10 +670,15 @@ namespace Run {
                 if (child is Field f && f.AccessType == AccessType.STATIC && f.Initializer != null) {
                     Writer.Write(f.Real);
                     Writer.Write(" = ");
-                    Save(f.Initializer);
+                    if (f.Initializer != null) {
+                        Save(f.Initializer);
+                    } else if (f.Type.IsPrimitive) {
+                        Writer.Write('0');
+                    } else {
+                        Save(f.Type.Default);
+                    }
                     Writer.WriteLine(";");
-                    SaveRegisterVar(f);
-                    Writer.WriteLine(";");
+                    //SaveRegisterVar(f);
                 }
             }
         }
@@ -1034,26 +1045,26 @@ namespace Run {
 
         bool AddRegion(Block block) {
             bool add = false;
-            if (block.Children.Count > 0) {
-                if ((add = block.Contains(a => (a is Var v && v.Initializer is NewExpression), false))) {
-                    Writer.Write("__current_region__");
-                    //Writer.Write(block.Token.Position);
-                    Writer.WriteLine(" = RegionAdd(__current_region__, __current_region__->capacity);");
-                }
-            }
+            //if (block.Children.Count > 0) {
+            //    if ((add = block.Contains(a => (a is Var v && v.Initializer is NewExpression), false))) {
+            //        Writer.Write("__current_region__");
+            //        //Writer.Write(block.Token.Position);
+            //        Writer.WriteLine(" = RegionAdd(__current_region__, __current_region__->capacity);");
+            //    }
+            //}
             return add;
         }
 
         void CloseOrResetRegion(bool added, Block block) {
-            if (added == false) return;
+            //if (added == false) return;
 
-            if (block is not For) {
-                Writer.Write("RegionClose(__current_region__");
-            } else {
-                Writer.Write("RegionReset(__current_region__");
-            }
-            //Writer.Write(block.Token.Position);
-            Writer.WriteLine(");");
+            //if (block is not For) {
+            //    Writer.Write("RegionClose(__current_region__");
+            //} else {
+            //    Writer.Write("RegionReset(__current_region__");
+            //}
+            ////Writer.Write(block.Token.Position);
+            //Writer.WriteLine(");");
         }
 
         void SaveBlock(Block block, bool savePosition = true) {
@@ -1092,7 +1103,12 @@ namespace Run {
                 Writer.Write(" >= ");
                 Writer.Write(defer.Token.Value);
                 Writer.WriteLine(") {");
-                SaveBlock(defer);
+                if (defer.Expression != null) {
+                    Save(defer.Expression);
+                    Writer.WriteLine(";");
+                } else {
+                    SaveBlock(defer);
+                }
                 Writer.WriteLine("}");
             }
             if (block.Parent is Block p && p is not Class) {
@@ -1121,6 +1137,7 @@ namespace Run {
                 case TypeOf t: Save(t); break;
                 case AsExpression a: Save(a); break;
                 case Ref r: Save(r); break;
+                //case ValueOf r: Save(r); break;
                 case ThisExpression t: Save(t); break;
                 case AssignExpression a: Save(a); break;
                 case BinaryExpression b: Save(b); break;
@@ -1145,8 +1162,22 @@ namespace Run {
                 case GetterSetter g: Save(g); break;
                 case Function f: Save(f); break;
                 case Var v: Save(v); break;
+                case Defer d: Save(d); break;
+                case Default df: Save(df); break;
                 case Block b: SaveBlock(b, false); break;
             }
+        }
+
+        void Save(ValueOf exp) {
+            //if (exp.Content.Type.IsPrimitive) {
+            //    Writer.Write("*(");
+            //} else if (exp.Content.Type.IsNumber) {
+            //    Writer.Write("*(");
+            //} else {
+            //}
+            Writer.Write("*((int*)(");
+            Save(exp.Content);
+            Writer.Write("))");
         }
 
         Class SaveReturnType(Function exp) {
@@ -1349,7 +1380,7 @@ namespace Run {
                 return;
             }
             //base.Save(writer, builder);
-            Save(exp as Var);
+            Save(exp as Var, false);
             if (exp.Arguments != null) {
                 //writer.Write(", int ");
                 //writer.Write(Token.Value);
@@ -1401,6 +1432,9 @@ namespace Run {
                 Writer.Write(exp.Type.Real ?? exp.Type.Token.Value);
                 Writer.Write(' ');
                 switch (exp.Initializer) {
+                    case AsExpression asexp:
+                        exp.TypeArray = asexp.IsArray;
+                        break;
                     case NewExpression ne:
                         exp.TypeArray = ne.Content is ArrayCreationExpression;
                         break;
@@ -1430,7 +1464,7 @@ namespace Run {
                 Save(exp.Initializer);
                 if (exp.NeedRegister || registerVar) {
                     Writer.WriteLine(";");
-                    SaveRegisterVar(exp);
+                    //SaveRegisterVar(exp);
                 }
             }
         }
@@ -1444,6 +1478,7 @@ namespace Run {
             Writer.Write(", ");
             Writer.Write(exp.Type.ID);
             Writer.Write(")");
+            Writer.WriteLine(";");
         }
 
         void Save(Label exp) {
@@ -1778,28 +1813,58 @@ namespace Run {
             }
         }
 
+        bool DoCastAsArray(AsExpression exp) {
+            switch (exp.Left) {
+                case IdentifierExpression id:
+                    if (id.From is Var v) {
+                        if (v.TypeArray) {
+                            return true;
+                        }
+                    }
+                    break;
+                case CallExpression call:
+                    if (call.Function.TypeArray) {
+                        return true;
+                    }
+                    break;
+                case Ref r:
+                    return false;
+            }
+            if (exp.Left.Type == Builder.Pointer) {
+                return exp.Right.Type != Builder.Pointer && exp.Right.Type != Builder.CharSequence;
+            }
+            return false;
+        }
+
         void Save(AsExpression exp) {
             if (exp.Type == null) return;
-            if (exp.Type.IsPrimitive == false && exp.Type.IsNative == false) {
+            var isArray = DoCastAsArray(exp);
+            if (isArray) {
+                Writer.Write("*(");
+            } else if (exp.Type.IsPrimitive == false) {
                 Writer.Write("*");
             }
             Writer.Write("(");
             SaveType(exp.Type);
-            if (exp.Type.IsPrimitive == false && exp.Type.IsNative == false) {
+            if (isArray) {
+                Writer.Write('*');
+            } else if (exp.IsArray) {
                 Writer.Write("*");
-            }
-            if (exp.IsArray) {
+            } else if (exp.Type.IsPrimitive == false) {
                 Writer.Write("*");
             }
             Writer.Write(")");
             Save(exp.Left);
+            if (isArray) {
+                Writer.Write(")");
+            }
         }
 
         void SaveNative(CallExpression exp) {
             Writer.Write(exp.Function.NativeNames[0]);
             Writer.Write('(');
             var args = exp.Function.NativeNames[1];
-            for (int i = 0; i < exp.Arguments.Count; i++) {
+            for (int i = 0; i < exp.Arguments.Count && i < exp.Function.Parameters.Children.Count; i++) {
                 var param = exp.Function.Parameters.Children[i];
                 var value = exp.Arguments[i];
                 if (value == null) {
@@ -1830,7 +1895,6 @@ namespace Run {
 
         void Save(CallExpression exp) {
             if (exp == null || exp.Function == null) return;
-
             if (exp.Function.IsNative && exp.Function.NativeNames?.Count >= 2) {
                 SaveNative(exp);
                 return;
@@ -1879,6 +1943,7 @@ namespace Run {
             Writer.Write(exp.ID);
             Writer.Write(" = ");
             Writer.Write(exp.Token.Value);
+            //Save(exp as Block);
             Writer.WriteLine(";");
         }
     }

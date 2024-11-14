@@ -39,7 +39,7 @@ type Network {
 type InputData {
 	var images : byte[]
 	var labels : byte[]
-	var total: i32
+	var total: i32	
 
 	function shuffle(size:i32) {
 		var temp:u8
@@ -62,8 +62,8 @@ type InputData {
 		var count = f.readI32().reverse()
 		f.readI32()
 		f.readI32()
-		images = new byte[total * size * size]
-		f.read(images, total * size * size)
+		images = new byte[count * size * size]
+		f.read(images, count * size * size)
 		f.close()
 	}
 
@@ -77,11 +77,132 @@ type InputData {
 	}
 }
 
+var hiddenOutput = new f32[256]
+var finalOutput = new f32[10]
+var hiddenGrad = new f32[256]
+var outputGrad = new f32[10]
+
+function forward(layer:Layer, input:f32[], output:f32[]) {
+	for i in 0..layer.outputSize {
+		output[i] = layer.biases[i]
+	}
+	for i in 0..layer.inputSize {
+		for j in 0..layer.outputSize {
+			output[j] += input[i] * layer.weights[i*layer.outputSize+j]
+		}
+	}
+	for i in 0..layer.outputSize {
+		if output[i] < 0 => output[i] = 0
+	}
+}
+
+function sigmoid(x:f32): f32 {
+	return 1.0 / (1.0 + Math.exp(-x))
+}
+
+function softmax(x:f32[], n:i32) {
+	var max = x[0]
+	for i in 1..n {
+		if x[i] > max {
+			max = x[i]
+		}
+	}
+	var sum = 0.0
+	for i in 0..n {
+		x[i] = Math.exp(x[i] - max)
+		sum += x[i]
+	}
+	for i in 0..n {
+		x[i] /= sum
+	}
+}
+
+function backward(layer:Layer, input:f32[], outputGrad:f32[],  inputGrad:f32[], rate:f32) {
+	if inputGrad!=null {
+		for i in 0..layer.inputSize {
+			inputGrad[i] = 0.0
+			for j in 0..layer.outputSize {
+				inputGrad[i] += outputGrad[j] * layer.weights[i*layer.outputSize+j]
+			}
+		}
+	}
+	for i in 0..layer.inputSize {
+		for j in 0..layer.outputSize {
+			var grad = outputGrad[j] * input[i]
+			var index = i*layer.outputSize+j;
+			layer.weightsMomentum[index] = 0.9f * layer.weightsMomentum[index] - rate * grad
+			layer.weights[index] += layer.weightsMomentum[index]
+			if inputGrad!=null {
+				inputGrad[i] += outputGrad[j] * layer.weights[index]
+			}
+		}
+	}
+	for i in 0..layer.outputSize {
+		layer.biasesMomentum[i] = 0.9f * layer.biasesMomentum[i] - rate * outputGrad[i]
+		layer.biases[i] += layer.biasesMomentum[i]
+	}
+}
+
+function train(net:Network, input:f32[], label:byte, rate:f32): f32 {
+	forward(net.hidden, input, hiddenOutput)
+	forward(net.output, hiddenOutput, finalOutput)
+	softmax(finalOutput, 10)
+
+	for i in 0..10 {
+		outputGrad[i] = finalOutput[i]- (i == label ? 1.0 : 0.0)
+	}
+	backward(net.output, hiddenOutput, outputGrad, hiddenGrad, rate)
+
+	for i in 0..256 {
+		if hiddenOutput[i] < 0 => hiddenGrad[i] = 0
+	}
+	backward(net.hidden, input, hiddenGrad, null as f32[], rate)
+
+	return finalOutput[label]
+}
+
+function predict(net:Network, input:f32[]): i32 {
+	forward(net.hidden, input, hiddenOutput)
+	forward(net.output, hiddenOutput, finalOutput)
+	softmax(finalOutput, 10)
+
+	var maxIndex = 0
+	for i in 0..10 {
+		if finalOutput[i] > finalOutput[maxIndex] => maxIndex = i
+	}
+	return maxIndex
+}
+
 main {
 	var net = new Network(784,256,10)
 	var data = new InputData()	
-	data.readImages("data/train-images-idx3-ubyte", 28)
-	data.readLabels("data/train-labels-idx1-ubyte")
+	data.readImages("./train-images.idx3-ubyte", 28)
+	data.readLabels("./train-labels.idx1-ubyte")
 	data.shuffle(784)
+	var trainSize = data.total * 0.8f
+	var testSize = data.total - trainSize
+
+	var img = new f32[784]
+	
+	for epoch in 0..20 {
+		var totalLoss = 0.0
+		for i in 0..trainSize {
+			for k in 0..784 {
+				img[k] = data.images[(i*784)+k] as f32 / 255.0
+			}
+			var trainValue = train(net, img, data.labels[i], 0.0005f)
+			totalLoss += Math.log(trainValue + 1e-10f)
+		}
+		var correct = 0
+		for i in trainSize..60_000 {
+			for k in 0..784 {
+				img[k] = data.images[(i*784)+k] as f32 / 255.0
+			}
+			if predict(net, img) == data.labels[i] {
+				correct++
+			}
+		}
+		print("Loss> %f, Correct>%d \n", totalLoss, correct)
+	}
 }
 

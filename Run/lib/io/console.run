@@ -3,6 +3,10 @@
 
 using io
 
+@native(getIO($index))
+@header(stdio.h)
+function getIO(index:i32):FILE
+
 static type Console {
 
 	static function readLine():string => readLine(128)

@@ -89,7 +89,8 @@ namespace Run {
                 case TokenType.QUOTE:
                 case TokenType.BOOL:
                 case TokenType.NULL:
-                case TokenType.REAL:
+                case TokenType.FLOAT:
+                case TokenType.DOUBLE:
                 case TokenType.CHAR:
                 case TokenType.HEX:
                     return new LiteralExpression(parent);
@@ -117,7 +118,8 @@ namespace Run {
                 case TokenType.QUOTE:
                 case TokenType.BOOL:
                 case TokenType.NULL:
-                case TokenType.REAL:
+                case TokenType.FLOAT:
+                case TokenType.DOUBLE:
                 case TokenType.CHAR:
                 case TokenType.HEX:
                     return new LiteralExpression(parent);
@@ -200,6 +202,7 @@ namespace Run {
                 case "sizeof": return new SizeOf(parent);
                 case "scope": return new NewExpression(parent) { IsScoped = true };
                 case "ref": return new Ref(parent);
+                case "valueof": return new ValueOf(parent);
                 case "typeof": return new TypeOf(parent);
                 case "base": return new Base(parent);
                 default: return new IdentifierExpression(parent);

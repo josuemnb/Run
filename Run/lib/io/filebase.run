@@ -3,10 +3,6 @@
 
 using "../io"
 
-@native(fopen($path,$mode))
-@header(stdio.h)
-function fopen(path:chars,mode:chars) :FILE
-
 @native(fclose($fp):i32)
 @header(stdio.h)
 function fclose(fp:FILE) :i32
@@ -44,7 +40,7 @@ type FileBase {
 	var fp:FILE
 	var path:chars
 	var opened:bool
-	var ended:i32
+	var ended = -1
 
 	property position:i32 {
 		get => ftell(fp)

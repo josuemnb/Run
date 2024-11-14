@@ -80,14 +80,21 @@ static type Math {
 	}
 	static function pow(a:f32, b:f32):f32 => pow(a as f64, b as f64) as f32
 
-	static function sqrt(x:f64):f64 {
-		var result = 1.0
-		for var i = 0; i < 10; i++ {
-			result = (result + x / result) / 2.0
-		}
-		return result
-	}
-	static function sqrt(x:f32):f32 => sqrt(x as f64) as f32
+	@native(exp($x):f64)
+	@header(math.h)
+	static function exp(x:f64):f64
+
+	@native(exp($x):f32)
+	@header(math.h)
+	static function expf(x:f32):f32
+
+	@native(sqrt($x):f64)
+	@header(math.h)
+	static function sqrt(x:f64):f64
+
+	@native(sqrtf($x):f32)
+	@header(math.h)
+	static function sqrt(x:f32):f32
 
 	static function sin(x:f64):f64 {
 		var result = 0.0
@@ -128,13 +135,10 @@ static type Math {
 	}
 	static function factorial(x:f32):f32 => factorial(x as f64) as f32
 
-	static function log(x:f64):f64 {
-		var result = 0.0
-		for var i = 1; i <= 10; i++ {
-			result += pow(-1.0, i + 1) * pow(x - 1.0, i) / i
-		}
-		return result
-	}
+	@native(log($x):f64)
+	@header(math.h)
+	static function log(x:f64):f64
+
 	static function log(x:f32):f32 => log(x as f64) as f32
 
 	static function log10(x:f32):f32 => (log(x as f64) / log(10.0)) as f32

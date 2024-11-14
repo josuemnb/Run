@@ -18,6 +18,7 @@ static type NumberHelper {
 		for ;value>0; i++ {
 			s[size - i] = '0' + value % 10
 			value /= 10
+			print("%d\n",i)
 		}
 		if neg {
 			s[size - i] = '-'

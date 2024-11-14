@@ -2,7 +2,7 @@
 
 namespace Run {
     public class Defer : Block {
-        Expression Expression;
+        public Expression Expression;
         internal int ID;
         public override void Parse() {
             Token = new Token {
