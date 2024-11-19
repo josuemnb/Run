@@ -53,8 +53,8 @@ namespace Run {
                 bool IS(int address, int is);
 
                 #define SCOPE(T,id)  ArenaScope(sizeof(T),id))
-                //#define DELETE(V) ArenaFree(V); V = 0
-                #define DELETE(V) free(V); V = 0
+                #define DELETE(V) ArenaFree(V); V = 0
+                //#define DELETE(V) free(V); V = 0
                 #define CAST(T,exp) (*(T*)exp)
                 #define SIZEOF(V) (int)((char *)(&V+1)-(char*)(&V))
                 #define CONVERT(T,ptr) *((T*)ptr)
@@ -68,8 +68,8 @@ namespace Run {
                 #define ENDTRY } } while (0)
                 #define THROW(j,x) longjmp(j, x)
 
-                //#define NEW(T,total,id, region) (T*) ArenaAlloc(sizeof(T)*total,region, id)
-                #define NEW(T,total,id, region) (T*) malloc(sizeof(T) * total)
+                #define NEW(T,total,id, region) (T*) ArenaAlloc(sizeof(T)*total,region, id)
+                //#define NEW(T,total,id, region) (T*) malloc(sizeof(T) * total)
 
                 int* mapAlloc;
                 int mapSize = 0;
@@ -134,8 +134,8 @@ namespace Run {
             }
             var libraries = Builder.Program.FindChildren<Library>().Select(l => l.Token.Value).Distinct().ToList();
             var location = AppContext.BaseDirectory;
-            var tcc = Directory.EnumerateFiles(location, "tcc.exe", SearchOption.AllDirectories).FirstOrDefault();
-            var info = new ProcessStartInfo(tcc) {
+            //var tcc = Directory.EnumerateFiles(location, "tcc.exe", SearchOption.AllDirectories).FirstOrDefault();
+            var info = new ProcessStartInfo("tcc.exe") {
                 Arguments = "-I" + Path.GetDirectoryName(location) + "/lib " + (Builder.Program.HasMain ? "-o " : "-c ") + "..\\" + Builder.Program.Token.Value + ".exe " + Destination + " -w " + (libraries.Count > 0 ? " -L" + string.Join(" -L", libraries.Select(Path.GetDirectoryName)) + "\"" + " -l\"" + string.Join(" -l\"", libraries.Select(Path.GetFileName)) : ""),
                 WindowStyle = ProcessWindowStyle.Hidden,
             };
@@ -678,7 +678,7 @@ namespace Run {
                         Save(f.Type.Default);
                     }
                     Writer.WriteLine(";");
-                    //SaveRegisterVar(f);
+                    SaveRegisterVar(f);
                 }
             }
         }
@@ -1285,10 +1285,8 @@ namespace Run {
                     Writer.Write("return ");
                 }
                 if ((exp.Parameters == null || exp.Parameters.Children.Count == 0) && exp.Children[0] is AST ast) {
-                    //ast.Save(writer, builder);
                     Save(ast);
                 } else if (exp.Parameters != null && exp.Children.Count > 1 && exp.Children[1] is AST a) {
-                    //a.Save(writer, builder);
                     Save(a);
                 }
                 Writer.WriteLine(";\n}");
@@ -1464,7 +1462,7 @@ namespace Run {
                 Save(exp.Initializer);
                 if (exp.NeedRegister || registerVar) {
                     Writer.WriteLine(";");
-                    //SaveRegisterVar(exp);
+                    SaveRegisterVar(exp);
                 }
             }
         }

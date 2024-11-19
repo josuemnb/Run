@@ -96,10 +96,6 @@ function forward(layer:Layer, input:f32[], output:f32[]) {
 	}
 }
 
-function sigmoid(x:f32): f32 {
-	return 1.0 / (1.0 + Math.exp(-x))
-}
-
 function softmax(x:f32[], n:i32) {
 	var max = x[0]
 	for i in 1..n {
@@ -191,7 +187,7 @@ main {
 				img[k] = data.images[(i*784)+k] as f32 / 255.0
 			}
 			var trainValue = train(net, img, data.labels[i], 0.0005f)
-			totalLoss += Math.log(trainValue + 1e-10f)
+			totalLoss += -Math.log(trainValue + 1e-10f)
 		}
 		var correct = 0
 		for i in trainSize..60_000 {
@@ -202,7 +198,7 @@ main {
 				correct++
 			}
 		}
-		print("Loss> %f, Correct>%d \n", totalLoss, correct)
+		print("Epoch: %d, Loss: %f, Correct: %d \n", epoch, totalLoss / trainSize, correct as f32 / (testSize * 100) as f32)
 	}
 }
 

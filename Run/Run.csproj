@@ -8,7 +8,6 @@
 		<LangVersion>preview</LangVersion>
 		<StartupObject>Run.Run</StartupObject>
 		<Platforms>AnyCPU;x64</Platforms>
-		<PublishAot>true</PublishAot>
 	</PropertyGroup>
 
 	<ItemGroup>
@@ -164,6 +163,13 @@
 		<None Update="testes\indexer.run">
 		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</None>
+		<None Update="testes\tostring.run">
+		  <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</None>
+	</ItemGroup>
+
+	<ItemGroup>
+	  <Folder Include="server\" />
 	</ItemGroup>
 
 	<!--<Target Name="PreBuild" BeforeTargets="PreBuildEvent">

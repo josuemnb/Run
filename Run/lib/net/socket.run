@@ -1,20 +1,57 @@
 // VERY IMPORTANT
 // DO NOT CHANGE THIS FILE
+@header(winsock2.h)
 
 @native(struct sockaddr_in)
-@header(winsock2.h)
 type sockaddr_in {
 	var sin_family: u16
 	var sin_port: u16
 	var sin_addr: u32
 }
 
+@native(struct WSADATA)
+type WSADATA {
+	var wVersion: u16
+	var wHighVersion: u16
+	var szDescription: chars
+	var szSystemStatus: chars
+	var iMaxSockets: u16
+	var iMaxUdpDg: u16
+	var lpVendorInfo: chars
+}
+
+@native(WASStartup($vr:u16,data:WSADATA):i32)
+function WSAStartup(vr: u16, data: WSADATA): i32
+
+@native(struct SOCKET)
+type SOCKET {
+	var fd: i32
+}
+
+@native(socket(domain:i32, type:i32, protocol:i32):SOCKET)
+function socket(domain: i32, type: i32, protocol: i32): SOCKET
+
+@native(SO_REUSEADDR:i32)
+const SO_REUSEADDR = 0x0004
+
+@native(AF_INET:i32)
+const AF_INET = 2
+
+@native(SOCK_STREAM:i32)
+const SOCK_STREAM = 1
+
 type Socket {
 	var port: i32
-	var ip: string
+	var ip: chars
+	var options: i32
 
 	this(.port) {
 		ip = "127.0.0.1"
+	}
+
+	bool reusable {
+		get => options & 1
+		set => options value ? |= SO_REUSEADDR: &= ~1
 	}
 
 	this(.ip, .port) { }
